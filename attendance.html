@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>打卡 — 派遣人員勤務管理系統</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">📋</div>
+    <div class="sidebar-brand">imPR 派遣系統<small>派遣人員</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">主要功能</div>
+    <a class="nav-item" href="staff-dashboard.html"><span class="nav-icon">🏠</span>首頁</a>
+    <a class="nav-item active" href="attendance.html"><span class="nav-icon">⏱</span>打卡</a>
+    <a class="nav-item" href="work-report.html"><span class="nav-icon">📝</span>工作回報</a>
+    <a class="nav-item" href="overtime.html"><span class="nav-icon">⏰</span>加班申請</a>
+    <a class="nav-item" href="leave.html"><span class="nav-icon">🌿</span>請假申請</a>
+    <a class="nav-item" href="issue.html"><span class="nav-icon">🚨</span>問題反映</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">—</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">—</div><div class="user-role">派遣人員</div></div>
+    </div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">⏱ 打卡</span>
+</header>
+<main class="main-content">
+
+  <!-- 時鐘 -->
+  <div style="text-align:center;padding:16px 0 8px">
+    <div style="font-size:3rem;font-weight:700;font-family:var(--font-mono);color:var(--text-primary)" id="liveClock">--:--:--</div>
+    <div style="font-size:.9rem;color:var(--text-secondary);margin-top:4px" id="liveDate">—</div>
+  </div>
+
+  <!-- 今日狀態 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📊 今日出勤狀態</span></div>
+    <div class="card-body" id="todayStatus"><div style="text-align:center;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+  <!-- 打卡按鈕 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">打卡操作</span></div>
+    <div class="card-body">
+      <div class="clock-grid">
+        <button class="clock-btn clock-btn-in"  id="btnIn"     onclick="doClock('in')">
+          <span class="clock-icon">🟢</span>上班打卡
+        </button>
+        <button class="clock-btn clock-btn-out" id="btnOut"    onclick="doClock('out')">
+          <span class="clock-icon">🔴</span>下班打卡
+        </button>
+        <button class="clock-btn clock-btn-remote" id="btnRemote" onclick="doClock('remote_in')" style="grid-column:1/-1">
+          <span class="clock-icon">📡</span>遠端打卡（上班）
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地點備註 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📍 打卡資訊</span></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-group">
+        <label class="form-label dark">工作地點</label>
+        <input class="form-input dark" type="text" id="location" placeholder="例：數位部 4F、遠端辦公" value="">
+      </div>
+      <div class="form-group">
+        <label class="form-label dark">備註（選填）</label>
+        <input class="form-input dark" type="text" id="note" placeholder="例：出差、視訊會議">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-secondary)">
+        <span id="gpsIcon">📍</span>
+        <span id="gpsStatus">取得位置中...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 本月打卡記錄 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📅 近期出勤記錄</span>
+    </div>
+    <div id="recordsList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let currentUser = null;
+let gpsLat = '', gpsLng = '';
+
+(async () => {
+  currentUser = await AUTH.guard(['staff']);
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.name;
+  document.getElementById('sidebarAvatar').textContent = currentUser.name.charAt(0);
+  startClock();
+  getGPS();
+  await loadTodayStatus();
+  await loadRecords();
+})();
+
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('liveClock').textContent =
+      [now.getHours(), now.getMinutes(), now.getSeconds()]
+        .map(n => String(n).padStart(2,'0')).join(':');
+    const weekDay = ['日','一','二','三','四','五','六'][now.getDay()];
+    document.getElementById('liveDate').textContent =
+      `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} 星期${weekDay}`;
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+function getGPS() {
+  if (!navigator.geolocation) {
+    document.getElementById('gpsStatus').textContent = '此裝置不支援 GPS';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    gpsLat = pos.coords.latitude.toFixed(6);
+    gpsLng = pos.coords.longitude.toFixed(6);
+    document.getElementById('gpsIcon').textContent = '✅';
+    document.getElementById('gpsStatus').textContent = `GPS 已取得 (${gpsLat}, ${gpsLng})`;
+  }, () => {
+    document.getElementById('gpsIcon').textContent = '⚠️';
+    document.getElementById('gpsStatus').textContent = 'GPS 取得失敗（仍可打卡）';
+  }, { timeout: 8000 });
+}
+
+async function loadTodayStatus() {
+  const r = await API.getTodayAttendance();
+  if (!r.success) return;
+  const el = document.getElementById('todayStatus');
+  const btnIn = document.getElementById('btnIn');
+  const btnOut = document.getElementById('btnOut');
+  const btnRemote = document.getElementById('btnRemote');
+
+  if (r.record) {
+    const rec = r.record;
+    const inT  = rec.clock_in_time  ? rec.clock_in_time.toString().substring(11,16)  : '—';
+    const outT = rec.clock_out_time ? rec.clock_out_time.toString().substring(11,16) : null;
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-around;padding:8px 0">
+        <div style="text-align:center">
+          <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">上班時間</div>
+          <div style="font-size:1.5rem;font-weight:700;color:var(--success);font-family:var(--font-mono)">${inT}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">下班時間</div>
+          <div style="font-size:1.5rem;font-weight:700;color:${outT?'var(--danger)':'var(--text-muted)'};font-family:var(--font-mono)">${outT||'—'}</div>
+        </div>
+        ${rec.work_hours?`<div style="text-align:center"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">工時</div>
+          <div style="font-size:1.5rem;font-weight:700;color:var(--primary);font-family:var(--font-mono)">${rec.work_hours}h</div></div>`:''}
+      </div>`;
+    // 已打上班卡 → 禁用上班按鈕
+    if (rec.clock_in_time)  { btnIn.disabled = true; btnRemote.disabled = true; }
+    // 已打下班卡 → 禁用下班按鈕
+    if (rec.clock_out_time) { btnOut.disabled = true; }
+  } else {
+    el.innerHTML = `<div style="text-align:center;color:var(--warning);font-weight:500;padding:8px">今日尚未打卡</div>`;
+    btnOut.disabled = true;
+  }
+}
+
+async function loadRecords() {
+  const now = new Date();
+  const start = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  const r = await API.getAttendanceList({ start_date: start });
+  if (!r.success) return;
+  const el = document.getElementById('recordsList');
+  if (!r.records.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">本月尚無出勤記錄</div></div>';
+    return;
+  }
+  el.innerHTML = r.records.slice(0,10).map(rec => {
+    const inT  = rec.clock_in_time  ? rec.clock_in_time.toString().substring(11,16)  : '—';
+    const outT = rec.clock_out_time ? rec.clock_out_time.toString().substring(11,16) : '—';
+    return `<div class="list-item">
+      <div class="list-item-main">
+        <div class="list-item-title">${rec.date}</div>
+        <div class="list-item-sub">${rec.clock_in_location || '—'} ・ ${CONFIG.ATTENDANCE_TYPE[rec.attendance_type]||rec.attendance_type}</div>
+      </div>
+      <div class="list-item-right">
+        <div style="font-family:var(--font-mono);font-size:.9rem;font-weight:600">${inT} → ${outT}</div>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px">${rec.work_hours?rec.work_hours+'h':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function doClock(type) {
+  const location = document.getElementById('location').value.trim();
+  const note     = document.getElementById('note').value.trim();
+  if (!location) { UI.showToast('請填寫工作地點', 'warning'); return; }
+
+  let result;
+  if (type === 'in') {
+    result = await API.clockIn(location, gpsLat, gpsLng, note);
+  } else if (type === 'out') {
+    result = await API.clockOut(location, gpsLat, gpsLng, note);
+  } else {
+    result = await API.remoteClock('in', location, gpsLat, gpsLng, note);
+  }
+
+  if (result.success) {
+    UI.showToast(result.message, 'success');
+    await loadTodayStatus();
+    await loadRecords();
+  } else {
+    UI.showToast(result.message || '操作失敗', 'error');
+  }
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+async function doLogout() { await API.logout(); AUTH.logout(); }
+</script>
+</body>
+</html>

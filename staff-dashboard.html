@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>派遣人員首頁</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">📋</div>
+    <div class="sidebar-brand">imPR 派遣系統<small>派遣人員</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">主要功能</div>
+    <a class="nav-item active" href="staff-dashboard.html"><span class="nav-icon">🏠</span>首頁</a>
+    <a class="nav-item" href="attendance.html"><span class="nav-icon">⏱</span>打卡</a>
+    <a class="nav-item" href="work-report.html"><span class="nav-icon">📝</span>工作回報</a>
+    <a class="nav-item" href="overtime.html"><span class="nav-icon">⏰</span>加班申請</a>
+    <a class="nav-item" href="leave.html"><span class="nav-icon">🌿</span>請假申請</a>
+    <a class="nav-item" href="issue.html"><span class="nav-icon">🚨</span>問題反映</a>
+    <div class="nav-section-label">帳號</div>
+    <a class="nav-item" href="change-password.html"><span class="nav-icon">🔐</span>修改密碼</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">—</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">載入中</div>
+        <div class="user-role">派遣人員</div>
+      </div>
+    </div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">📋 派遣人員首頁</span>
+  <span id="navDate" style="font-size:.8rem;color:#5f6368"></span>
+</header>
+<main class="main-content">
+  <div class="page-header">
+    <h1 class="page-title" id="greeting">歡迎，— 👋</h1>
+    <p class="page-sub" id="todayDate">今天是 —</p>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">⏱ 今日出勤</span>
+      <a href="attendance.html" style="font-size:.85rem;color:var(--primary);font-weight:500">去打卡 →</a>
+    </div>
+    <div class="card-body" id="clockStatus"><div style="text-align:center;padding:8px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📝 今日工作回報</span>
+      <a href="work-report.html" style="font-size:.85rem;color:var(--primary);font-weight:500" id="reportLink">填寫 →</a>
+    </div>
+    <div class="card-body" id="reportStatus"><div style="text-align:center;padding:8px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card" style="border-left-color:var(--success)">
+      <div class="stat-label">本月出勤天數</div>
+      <div class="stat-value" id="statDays">—</div>
+      <div class="stat-sub">天</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--danger)">
+      <div class="stat-label">本月加班時數</div>
+      <div class="stat-value" id="statOT">—</div>
+      <div class="stat-sub">小時</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--purple)">
+      <div class="stat-label">本月請假時數</div>
+      <div class="stat-value" id="statLeave">—</div>
+      <div class="stat-sub">小時</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--warning)">
+      <div class="stat-label">未結問題反映</div>
+      <div class="stat-value" id="statIssues">—</div>
+      <div class="stat-sub">件</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">⚡ 快速操作</span></div>
+    <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <a href="overtime.html"    class="btn btn-outline btn-sm" style="text-decoration:none">⏰ 申請加班</a>
+      <a href="leave.html"       class="btn btn-outline btn-sm" style="text-decoration:none">🌿 申請請假</a>
+      <a href="issue.html"       class="btn btn-outline btn-sm" style="text-decoration:none">🚨 問題反映</a>
+      <a href="work-report.html" class="btn btn-outline btn-sm" style="text-decoration:none">📋 查看回報</a>
+    </div>
+  </div>
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let currentUser = null;
+(async () => {
+  currentUser = await AUTH.guard(['staff']);
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.name;
+  document.getElementById('sidebarAvatar').textContent = currentUser.name.charAt(0);
+  const now = new Date();
+  const weekDay = ['日','一','二','三','四','五','六'][now.getDay()];
+  const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} (${weekDay})`;
+  document.getElementById('todayDate').textContent = '今天是 ' + dateStr;
+  document.getElementById('navDate').textContent = dateStr;
+  const h = now.getHours();
+  const g = h < 12 ? '早安' : h < 18 ? '午安' : '晚安';
+  document.getElementById('greeting').textContent = `${g}，${currentUser.name} 👋`;
+  await loadDashboard();
+})();
+
+async function loadDashboard() {
+  const d = await API.getStaffDashboard();
+  if (!d.success) { UI.showToast('載入失敗', 'error'); return; }
+  const clockEl = document.getElementById('clockStatus');
+  if (d.today_attendance) {
+    const att = d.today_attendance;
+    const inT  = att.clock_in_time  ? att.clock_in_time.toString().substring(11,16)  : '—';
+    const outT = att.clock_out_time ? att.clock_out_time.toString().substring(11,16) : null;
+    clockEl.innerHTML = `<div style="display:flex;gap:16px;align-items:center;justify-content:center">
+      <div style="text-align:center"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:4px">上班</div>
+        <div style="font-size:1.75rem;font-weight:700;color:var(--success);font-family:var(--font-mono)">${inT}</div></div>
+      <div style="color:var(--border);font-size:1.5rem">→</div>
+      <div style="text-align:center"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:4px">下班</div>
+        <div style="font-size:1.75rem;font-weight:700;color:${outT?'var(--danger)':'var(--text-muted)'};font-family:var(--font-mono)">${outT||'未打卡'}</div></div>
+      ${att.work_hours?`<div style="text-align:center"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:4px">工時</div>
+        <div style="font-size:1.75rem;font-weight:700;color:var(--primary);font-family:var(--font-mono)">${att.work_hours}h</div></div>`:''}
+    </div>`;
+  } else {
+    clockEl.innerHTML = `<div style="text-align:center;padding:4px">
+      <p style="color:var(--warning);font-weight:500;margin-bottom:12px">⚠️ 今日尚未打卡</p>
+      <a href="attendance.html" class="btn btn-primary" style="text-decoration:none;display:inline-flex;width:auto;padding:10px 28px">立即打卡</a>
+    </div>`;
+  }
+  const reportEl = document.getElementById('reportStatus');
+  if (d.today_report_submitted) {
+    document.getElementById('reportLink').textContent = '查看 →';
+    reportEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.5rem">✅</span><span style="color:var(--success);font-weight:500">今日工作回報已提交</span></div>`;
+  } else {
+    reportEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.5rem">📋</span>
+      <div><p style="color:var(--warning);font-weight:500">尚未填寫今日工作回報</p>
+        <p style="font-size:.8rem;color:var(--text-muted);margin-top:2px">請在下班前完成填寫</p></div></div>`;
+  }
+  document.getElementById('statDays').textContent   = d.month_attendance_days || 0;
+  document.getElementById('statOT').textContent     = d.month_overtime_hours  || 0;
+  document.getElementById('statLeave').textContent  = d.month_leave_hours     || 0;
+  document.getElementById('statIssues').textContent = d.open_issues           || 0;
+}
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+async function doLogout() { await API.logout(); AUTH.logout(); }
+</script>
+</body>
+</html>

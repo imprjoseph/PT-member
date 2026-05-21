@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>管理者後台 — 派遣人員勤務管理系統</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">🛡</div>
+    <div class="sidebar-brand">imPR 派遣系統<small>管理者後台</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">管理功能</div>
+    <a class="nav-item active" href="admin-dashboard.html"><span class="nav-icon">📊</span>總覽</a>
+    <a class="nav-item" href="admin-users.html"><span class="nav-icon">👥</span>帳號管理</a>
+    <a class="nav-item" href="admin-attendance.html"><span class="nav-icon">⏱</span>出勤管理</a>
+    <a class="nav-item" href="admin-overtime.html"><span class="nav-icon">⏰</span>加班審核</a>
+    <a class="nav-item" href="admin-leave.html"><span class="nav-icon">🌿</span>請假審核</a>
+    <a class="nav-item" href="admin-reports.html"><span class="nav-icon">📈</span>統計報表</a>
+    <div class="nav-section-label">帳號</div>
+    <a class="nav-item" href="change-password.html"><span class="nav-icon">🔐</span>修改密碼</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">A</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">管理者</div><div class="user-role">Admin</div></div>
+    </div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">📊 管理者總覽</span>
+  <span id="navDate" style="font-size:.8rem;color:#5f6368"></span>
+</header>
+<main class="main-content">
+
+  <div class="page-header">
+    <h1 class="page-title">管理者後台</h1>
+    <p class="page-sub" id="todayStr">今天是 —</p>
+  </div>
+
+  <!-- 今日出勤 KPI -->
+  <div class="stat-grid">
+    <div class="stat-card" style="border-left-color:var(--primary)">
+      <div class="stat-label">派遣人員總數</div>
+      <div class="stat-value" id="kpiTotal">—</div>
+      <div class="stat-sub">人（在職）</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--success)">
+      <div class="stat-label">今日已打上班卡</div>
+      <div class="stat-value" id="kpiIn">—</div>
+      <div class="stat-sub">人</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--warning)">
+      <div class="stat-label">未提工作回報</div>
+      <div class="stat-value" id="kpiNoReport">—</div>
+      <div class="stat-sub">人</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--danger)">
+      <div class="stat-label">未結問題反映</div>
+      <div class="stat-value" id="kpiIssues">—</div>
+      <div class="stat-sub">件</div>
+    </div>
+  </div>
+
+  <!-- 待辦 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">🔔 待處理事項</span></div>
+    <div id="pendingList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+  <!-- 本月統計 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📈 本月統計</span></div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="text-align:center">
+          <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px">加班核准時數</div>
+          <div style="font-size:1.75rem;font-weight:700;color:var(--danger);font-family:var(--font-mono)" id="monthOT">—</div>
+          <div style="font-size:.75rem;color:var(--text-muted)">小時</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px">已打卡總人次</div>
+          <div style="font-size:1.75rem;font-weight:700;color:var(--success);font-family:var(--font-mono)" id="todayOut">—</div>
+          <div style="font-size:.75rem;color:var(--text-muted)">已下班</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 快速入口 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">⚡ 快速入口</span></div>
+    <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <a href="admin-users.html"      class="btn btn-outline btn-sm" style="text-decoration:none">👥 帳號管理</a>
+      <a href="admin-attendance.html" class="btn btn-outline btn-sm" style="text-decoration:none">⏱ 出勤查詢</a>
+      <a href="admin-overtime.html"   class="btn btn-outline btn-sm" style="text-decoration:none">⏰ 加班審核</a>
+      <a href="admin-leave.html"      class="btn btn-outline btn-sm" style="text-decoration:none">🌿 請假審核</a>
+      <a href="admin-reports.html"    class="btn btn-outline btn-sm" style="text-decoration:none;grid-column:1/-1">📊 統計報表 / CSV 匯出</a>
+    </div>
+  </div>
+
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+(async () => {
+  const user = await AUTH.guard(['admin']);
+  if (!user) return;
+  document.getElementById('sidebarName').textContent = user.name;
+  document.getElementById('sidebarAvatar').textContent = user.name.charAt(0);
+
+  const now = new Date();
+  const weekDay = ['日','一','二','三','四','五','六'][now.getDay()];
+  const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} (${weekDay})`;
+  document.getElementById('todayStr').textContent = '今天是 ' + dateStr;
+  document.getElementById('navDate').textContent = dateStr;
+
+  const d = await API.getAdminDashboard();
+  if (!d.success) { UI.showToast('載入失敗','error'); return; }
+
+  document.getElementById('kpiTotal').textContent    = d.total_staff      || 0;
+  document.getElementById('kpiIn').textContent       = d.today_clocked_in || 0;
+  document.getElementById('kpiNoReport').textContent = d.today_no_report  || 0;
+  document.getElementById('kpiIssues').textContent   = d.open_issues      || 0;
+  document.getElementById('monthOT').textContent     = d.month_total_ot_hours || 0;
+  document.getElementById('todayOut').textContent    = d.today_clocked_out || 0;
+
+  // 待處理列表
+  const items = [];
+  if (d.pending_overtime > 0) items.push({ icon:'⏰', text:`待審核加班申請`, count: d.pending_overtime, href:'admin-overtime.html', color:'var(--danger)' });
+  if (d.pending_leave    > 0) items.push({ icon:'🌿', text:`待審核請假申請`, count: d.pending_leave,    href:'admin-leave.html',    color:'var(--purple)' });
+  if (d.open_issues      > 0) items.push({ icon:'🚨', text:`未結問題反映`,   count: d.open_issues,      href:'#',                    color:'var(--warning)' });
+  if (d.today_no_report  > 0) items.push({ icon:'📋', text:`未提工作回報`,   count: d.today_no_report,  href:'admin-reports.html',   color:'var(--info)' });
+
+  const el = document.getElementById('pendingList');
+  if (!items.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">目前無待處理事項</div></div>';
+  } else {
+    el.innerHTML = items.map(it => `
+      <a href="${it.href}" class="list-item" style="text-decoration:none;color:inherit;display:flex">
+        <div style="font-size:1.4rem;margin-right:12px">${it.icon}</div>
+        <div class="list-item-main"><div class="list-item-title">${it.text}</div></div>
+        <div><span class="badge" style="background:${it.color}20;color:${it.color};border:1px solid ${it.color}40;font-size:.9rem">${it.count}</span></div>
+      </a>`).join('');
+  }
+})();
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+async function doLogout() { await API.logout(); AUTH.logout(); }
+</script>
+</body>
+</html>

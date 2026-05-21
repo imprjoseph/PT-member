@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>工作回報 — 派遣人員勤務管理系統</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">📋</div>
+    <div class="sidebar-brand">imPR 派遣系統<small>派遣人員</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">主要功能</div>
+    <a class="nav-item" href="staff-dashboard.html"><span class="nav-icon">🏠</span>首頁</a>
+    <a class="nav-item" href="attendance.html"><span class="nav-icon">⏱</span>打卡</a>
+    <a class="nav-item active" href="work-report.html"><span class="nav-icon">📝</span>工作回報</a>
+    <a class="nav-item" href="overtime.html"><span class="nav-icon">⏰</span>加班申請</a>
+    <a class="nav-item" href="leave.html"><span class="nav-icon">🌿</span>請假申請</a>
+    <a class="nav-item" href="issue.html"><span class="nav-icon">🚨</span>問題反映</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">—</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">—</div><div class="user-role">派遣人員</div></div>
+    </div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">📝 工作回報</span>
+</header>
+<main class="main-content">
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('form', this)">填寫回報</button>
+    <button class="tab-btn"       onclick="switchTab('list', this)">歷史記錄</button>
+  </div>
+
+  <!-- 填寫回報 -->
+  <div id="tabForm">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📝 每日工作回報</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <div class="form-group">
+          <label class="form-label dark">回報日期 <span style="color:var(--danger)">*</span></label>
+          <input class="form-input dark" type="date" id="reportDate">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label dark">工作地點</label>
+          <input class="form-input dark" type="text" id="workLocation" placeholder="例：數位部 4F、遠端辦公">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label dark">今日完成事項 <span style="color:var(--danger)">*</span></label>
+          <textarea class="form-input dark" id="completedTasks" rows="3" placeholder="請條列今日已完成的工作項目"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label dark">進行中事項</label>
+          <textarea class="form-input dark" id="ongoingTasks" rows="2" placeholder="尚在進行中的工作（選填）"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label dark">待確認事項</label>
+          <textarea class="form-input dark" id="pendingItems" rows="2" placeholder="需要確認或等待回覆的事項（選填）"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label dark">協助單位</label>
+          <input class="form-input dark" type="text" id="supportUnit" placeholder="例：數位部 A 科、廠商 XX">
+        </div>
+
+        <div style="display:flex;gap:16px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+            <input type="checkbox" id="needAssistance" style="width:18px;height:18px">
+            <span>需要協助</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+            <input type="checkbox" id="issueFlag" style="width:18px;height:18px">
+            <span>有問題需反映</span>
+          </label>
+        </div>
+
+        <button class="btn btn-primary" id="submitBtn" onclick="doSubmit()">提交工作回報</button>
+        <div id="submitResult" style="display:none;padding:12px;border-radius:8px;font-size:.875rem;text-align:center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 歷史記錄 -->
+  <div id="tabList" style="display:none">
+    <div id="reportList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let currentUser = null;
+
+(async () => {
+  currentUser = await AUTH.guard(['staff']);
+  if (!currentUser) return;
+  document.getElementById('sidebarName').textContent = currentUser.name;
+  document.getElementById('sidebarAvatar').textContent = currentUser.name.charAt(0);
+  // 預填今天日期
+  const today = new Date();
+  document.getElementById('reportDate').value =
+    `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+})();
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tabForm').style.display = tab === 'form' ? '' : 'none';
+  document.getElementById('tabList').style.display = tab === 'list' ? '' : 'none';
+  if (tab === 'list') loadHistory();
+}
+
+async function doSubmit() {
+  const report_date     = document.getElementById('reportDate').value;
+  const completed_tasks = document.getElementById('completedTasks').value.trim();
+  if (!report_date)     { UI.showToast('請選擇日期', 'warning'); return; }
+  if (!completed_tasks) { UI.showToast('請填寫今日完成事項', 'warning'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '提交中...';
+
+  const result = await API.submitWorkReport({
+    report_date,
+    work_location:   document.getElementById('workLocation').value.trim(),
+    completed_tasks,
+    ongoing_tasks:   document.getElementById('ongoingTasks').value.trim(),
+    pending_items:   document.getElementById('pendingItems').value.trim(),
+    support_unit:    document.getElementById('supportUnit').value.trim(),
+    need_assistance: document.getElementById('needAssistance').checked ? 'TRUE' : 'FALSE',
+    issue_flag:      document.getElementById('issueFlag').checked ? 'TRUE' : 'FALSE'
+  });
+
+  btn.disabled = false; btn.textContent = '提交工作回報';
+
+  const el = document.getElementById('submitResult');
+  el.style.display = 'block';
+  if (result.success) {
+    el.style.background='#e6f4ea'; el.style.color='#0f9d58'; el.style.border='1px solid #c3e6cb';
+    el.textContent = '✓ ' + result.message;
+    UI.showToast(result.message, 'success');
+  } else {
+    el.style.background='#fce8e6'; el.style.color='#db4437'; el.style.border='1px solid #f5c6c3';
+    el.textContent = result.message;
+  }
+}
+
+async function loadHistory() {
+  const r = await API.getMyWorkReports({ limit: 20 });
+  const el = document.getElementById('reportList');
+  if (!r.success || !r.reports.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">尚無工作回報記錄</div></div>';
+    return;
+  }
+  el.innerHTML = r.reports.map(rep => `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <span style="font-weight:700">${rep.report_date}</span>
+        <div style="display:flex;gap:6px">
+          ${rep.need_assistance==='TRUE'?'<span class="badge" style="background:#fff8e1;color:#f4b400;border:1px solid #ffe082">需協助</span>':''}
+          ${rep.issue_flag==='TRUE'?'<span class="badge" style="background:#fce8e6;color:#db4437;border:1px solid #f5c6c3">有問題</span>':''}
+        </div>
+      </div>
+      <div class="card-body" style="font-size:.875rem">
+        <p style="color:var(--text-muted);font-size:.75rem;margin-bottom:4px">工作地點：${rep.work_location||'—'}</p>
+        <p style="font-weight:500;margin-bottom:6px">✅ 完成事項</p>
+        <p style="white-space:pre-line;color:var(--text-secondary);margin-bottom:10px">${rep.completed_tasks}</p>
+        ${rep.ongoing_tasks?`<p style="font-weight:500;margin-bottom:4px">🔄 進行中</p><p style="white-space:pre-line;color:var(--text-secondary)">${rep.ongoing_tasks}</p>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+async function doLogout() { await API.logout(); AUTH.logout(); }
+</script>
+</body>
+</html>
