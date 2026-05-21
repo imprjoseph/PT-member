@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>出勤管理</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><img src="impr-logo.png" alt="imPR" style="height:36px;filter:brightness(0) invert(1)"><div class="sidebar-brand">imPR 派遣系統<small>管理者後台</small></div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">管理功能</div>
+    <a class="nav-item" href="admin-dashboard.html"><span class="nav-icon">📊</span>總覽</a>
+    <a class="nav-item" href="admin-users.html"><span class="nav-icon">👥</span>帳號管理</a>
+    <a class="nav-item active" href="admin-attendance.html"><span class="nav-icon">⏱</span>出勤管理</a>
+    <a class="nav-item" href="admin-overtime.html"><span class="nav-icon">⏰</span>加班審核</a>
+    <a class="nav-item" href="admin-leave.html"><span class="nav-icon">🌿</span>請假審核</a>
+    <a class="nav-item" href="admin-reports.html"><span class="nav-icon">📈</span>統計報表</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="user-avatar" id="sidebarAvatar">A</div><div class="user-info"><div class="user-name" id="sidebarName">管理者</div><div class="user-role">Admin</div></div></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">⏱ 出勤管理</span>
+</header>
+<main class="main-content">
+
+  <!-- 篩選列 -->
+  <div class="filter-bar">
+    <input class="form-input dark" type="date" id="filterStart" style="flex:1;min-width:130px">
+    <input class="form-input dark" type="date" id="filterEnd"   style="flex:1;min-width:130px">
+    <button class="btn btn-primary btn-sm" onclick="doSearch()" style="width:auto;padding:0 20px">查詢</button>
+    <button class="btn btn-ghost btn-sm"   onclick="doExport()" style="width:auto;padding:0 16px">📥 CSV</button>
+  </div>
+
+  <!-- 統計列 -->
+  <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat-card" style="border-left-color:var(--success)">
+      <div class="stat-label">查詢期間出勤筆數</div>
+      <div class="stat-value" id="statTotal">—</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--warning)">
+      <div class="stat-label">遲到 / 早退</div>
+      <div class="stat-value" id="statAbnormal">—</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--danger)">
+      <div class="stat-label">缺卡筆數</div>
+      <div class="stat-value" id="statMissing">—</div>
+    </div>
+  </div>
+
+  <!-- 列表 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">出勤記錄</span><span id="resultCount" style="font-size:.85rem;color:var(--text-muted)"></span></div>
+    <div id="attList"><div style="text-align:center;padding:24px;color:var(--text-muted)">請選擇日期後按查詢</div></div>
+  </div>
+
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()"><div class="modal-box" onclick="event.stopPropagation()"><div class="modal-title" id="modal-title"></div><div class="modal-body" id="modal-body"></div><div class="modal-actions"><button class="btn btn-primary btn-sm" id="modal-confirm">確認</button><button class="btn btn-ghost btn-sm" id="modal-cancel" onclick="UI.hideModal()">取消</button></div></div></div>
+<script src="js/config.js"></script><script src="js/api.js"></script><script src="js/auth.js"></script>
+<script>
+let records = [];
+(async () => {
+  const user = await AUTH.guard(['admin']); if (!user) return;
+  document.getElementById('sidebarName').textContent = user.name;
+  document.getElementById('sidebarAvatar').textContent = user.name.charAt(0);
+  // 預設本月
+  const now = new Date();
+  const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('filterStart').value = `${y}-${m}-01`;
+  document.getElementById('filterEnd').value   = `${y}-${m}-${String(now.getDate()).padStart(2,'0')}`;
+  await doSearch();
+})();
+
+async function doSearch() {
+  const start = document.getElementById('filterStart').value;
+  const end   = document.getElementById('filterEnd').value;
+  const r = await API.getAttendanceList({ start_date: start, end_date: end });
+  if (!r.success) { UI.showToast('查詢失敗', 'error'); return; }
+  records = r.records;
+
+  const abnormal = records.filter(r => ['late','early_leave'].includes(r.status)).length;
+  const missing  = records.filter(r => ['missing_clock_in','missing_clock_out'].includes(r.status)).length;
+  document.getElementById('statTotal').textContent    = records.length;
+  document.getElementById('statAbnormal').textContent = abnormal;
+  document.getElementById('statMissing').textContent  = missing;
+  document.getElementById('resultCount').textContent  = `共 ${records.length} 筆`;
+  renderList();
+}
+
+function renderList() {
+  const el = document.getElementById('attList');
+  if (!records.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">查詢期間無出勤記錄</div></div>'; return; }
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>日期</th><th>姓名</th><th>上班</th><th>下班</th><th>工時</th><th>地點</th><th>狀態</th></tr></thead>
+    <tbody>${records.map(rec => `<tr>
+      <td style="font-weight:500">${rec.date}</td>
+      <td>${rec.name}</td>
+      <td style="font-family:var(--font-mono)">${rec.clock_in_time  ? rec.clock_in_time.toString().substring(11,16)  : '—'}</td>
+      <td style="font-family:var(--font-mono)">${rec.clock_out_time ? rec.clock_out_time.toString().substring(11,16) : '—'}</td>
+      <td style="font-family:var(--font-mono)">${rec.work_hours ? rec.work_hours+'h' : '—'}</td>
+      <td style="font-size:.8rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rec.clock_in_location||'—'}</td>
+      <td>${UI.statusBadge(rec.status||'normal')}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function doExport() {
+  const start = document.getElementById('filterStart').value;
+  const end   = document.getElementById('filterEnd').value;
+  const r = await API.exportAttendanceCsv({ start_date: start, end_date: end });
+  if (!r.success) { UI.showToast('匯出失敗','error'); return; }
+  const blob = new Blob([r.csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `出勤記錄_${start}_${end}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  UI.showToast('CSV 匯出成功', 'success');
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+async function doLogout() { await API.logout(); AUTH.logout(); }
+</script>
+</body>
+</html>

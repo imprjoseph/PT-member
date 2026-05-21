@@ -52,9 +52,9 @@ const API = (() => {
     resetPassword: (user_id, new_password) => call('resetPassword', { user_id, new_password }),
 
     // Attendance
-    clockIn: (location, lat, lng, note) => call('clockIn', { location, lat, lng, note }),
-    clockOut: (location, lat, lng, note) => call('clockOut', { location, lat, lng, note }),
-    remoteClock: (type, location, lat, lng, note) => call('remoteClock', { type, location, lat, lng, note }),
+    clockIn: (location, lat, lng, note, client_ip) => call('clockIn', { location, lat, lng, note, client_ip }),
+    clockOut: (location, lat, lng, note, client_ip) => call('clockOut', { location, lat, lng, note, client_ip }),
+    remoteClock: (type, location, lat, lng, note, client_ip) => call('remoteClock', { type, location, lat, lng, note, client_ip }),
     getTodayAttendance: () => call('getTodayAttendance', {}),
     getAttendanceList: (params) => call('getAttendanceList', params || {}),
     exportAttendanceCsv: (params) => call('exportAttendanceCsv', params || {}),
@@ -92,6 +92,11 @@ const API = (() => {
     clientReplyIssue: (issue_id, response) => call('clientReplyIssue', { issue_id, response }),
     closeIssue: (issue_id) => call('closeIssue', { issue_id }),
     getIssueStats: () => call('getIssueStats', {}),
+
+    // IP Control (Admin)
+    addAllowedIP: (ip) => call('addAllowedIP', { ip }),
+    removeAllowedIP: (ip) => call('removeAllowedIP', { ip }),
+    getAllowedIPList: () => call('getAllowedIPList', {}),
 
     // Dashboard
     getStaffDashboard: () => call('getStaffDashboard', {}),

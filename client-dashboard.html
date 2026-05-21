@@ -2,36 +2,219 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>數發部首頁 — 派遣人員勤務管理系統</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>數發部管理介面</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><img src="impr-logo.png" alt="imPR" style="height:36px;filter:brightness(0) invert(1)"><div class="sidebar-brand">imPR 派遣系統<small>數發部管理介面</small></div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">功能選單</div>
+    <a class="nav-item active" href="client-dashboard.html"><span class="nav-icon">📊</span>總覽</a>
+    <div class="nav-section-label">操作</div>
+    <a class="nav-item" href="change-password.html"><span class="nav-icon">🔐</span>修改密碼</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="user-avatar" id="sidebarAvatar">—</div><div class="user-info"><div class="user-name" id="sidebarName">—</div><div class="user-role">數發部</div></div></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">🏛 數發部管理介面</span>
+  <span id="navDate" style="font-size:.8rem;color:#5f6368"></span>
+</header>
+<main class="main-content">
+
+  <div class="page-header">
+    <h1 class="page-title">今日派遣狀況</h1>
+    <p class="page-sub" id="todayStr">—</p>
+  </div>
+
+  <!-- 今日 KPI -->
+  <div class="stat-grid">
+    <div class="stat-card" style="border-left-color:var(--primary)">
+      <div class="stat-label">派遣人員總數</div>
+      <div class="stat-value" id="kpiTotal">—</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--success)">
+      <div class="stat-label">今日已出勤</div>
+      <div class="stat-value" id="kpiIn">—</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--warning)">
+      <div class="stat-label">待確認加班</div>
+      <div class="stat-value" id="kpiOT">—</div>
+    </div>
+    <div class="stat-card" style="border-left-color:var(--danger)">
+      <div class="stat-label">待回覆問題</div>
+      <div class="stat-value" id="kpiIssue">—</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('report',this)">工作回報</button>
+    <button class="tab-btn"       onclick="switchTab('overtime',this)">加班確認</button>
+    <button class="tab-btn"       onclick="switchTab('issues',this)">問題反映</button>
+  </div>
+
+  <!-- 工作回報 -->
+  <div id="tabReport">
+    <div id="reportList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+  <!-- 加班確認 -->
+  <div id="tabOT" style="display:none">
+    <div id="otList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+  <!-- 問題反映 -->
+  <div id="tabIssue" style="display:none">
+    <div id="issueList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+</main>
 <div id="loading-overlay"><div class="spinner"></div></div>
 <div id="toast-container"></div>
-<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;gap:16px">
-  <div style="font-size:3rem">📋</div>
-  <h1 style="font-size:1.25rem;font-weight:700;color:#1a1a2e">歡迎，<span id="uname"></span></h1>
-  <p style="color:#5f6368;font-size:.9rem">系統建置中，完整功能即將上線</p>
-  <div style="background:#fff;border-radius:12px;padding:20px;width:100%;max-width:360px;box-shadow:0 4px 12px rgba(0,0,0,.08)">
-    <p style="font-size:.85rem;color:#5f6368;margin-bottom:12px">目前可使用：</p>
-    <a href="change-password.html" style="display:block;padding:12px;background:#e8f0fe;border-radius:8px;color:#1a73e8;font-weight:500;font-size:.9rem;text-align:center">🔐 修改密碼</a>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
   </div>
-  <button onclick="doLogout()" style="margin-top:8px;padding:10px 24px;border:1.5px solid #dadce0;border-radius:8px;background:#fff;color:#5f6368;font-size:.9rem;cursor:pointer">登出</button>
 </div>
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script src="js/auth.js"></script>
+<script src="js/config.js"></script><script src="js/api.js"></script><script src="js/auth.js"></script>
 <script>
-(async()=>{
-  const user = await AUTH.guard(['client']);
-  if(!user) return;
-  document.getElementById('uname').textContent = user.name;
+let allOT = [], allIssues = [];
+
+(async () => {
+  const user = await AUTH.guard(['client']); if (!user) return;
+  document.getElementById('sidebarName').textContent = user.name;
+  document.getElementById('sidebarAvatar').textContent = user.name.charAt(0);
+  const now = new Date();
+  const weekDay = ['日','一','二','三','四','五','六'][now.getDay()];
+  const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} (${weekDay})`;
+  document.getElementById('todayStr').textContent = '今天是 ' + dateStr;
+  document.getElementById('navDate').textContent = dateStr;
+
+  const d = await API.getClientDashboard();
+  if (d.success) {
+    document.getElementById('kpiTotal').textContent = d.total_staff     || 0;
+    document.getElementById('kpiIn').textContent    = d.today_clocked_in|| 0;
+    document.getElementById('kpiOT').textContent    = d.pending_ot_confirm || 0;
+    document.getElementById('kpiIssue').textContent = d.issues_need_reply  || 0;
+  }
+
+  await loadReports();
 })();
-async function doLogout(){
-  await API.logout();
-  AUTH.logout();
+
+async function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  document.getElementById('tabReport').style.display  = tab==='report'   ? '' : 'none';
+  document.getElementById('tabOT').style.display      = tab==='overtime' ? '' : 'none';
+  document.getElementById('tabIssue').style.display   = tab==='issues'   ? '' : 'none';
+  if (tab==='report')   await loadReports();
+  if (tab==='overtime') await loadOT();
+  if (tab==='issues')   await loadIssues();
 }
+
+async function loadReports() {
+  const now = new Date();
+  const start = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  const r = await API.getAllWorkReports({ start_date: start });
+  const el = document.getElementById('reportList');
+  if (!r.success || !r.reports.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">本月尚無工作回報</div></div>'; return; }
+  el.innerHTML = r.reports.map(rep => `
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-header">
+        <div><span style="font-weight:700">${rep.name}</span><span style="font-size:.8rem;color:var(--text-muted);margin-left:8px">${rep.report_date}</span></div>
+        <div style="display:flex;gap:6px">
+          ${rep.issue_flag==='TRUE'?'<span class="badge" style="background:#fce8e6;color:var(--danger);border:1px solid #f5c6c3">有問題</span>':''}
+          ${rep.need_assistance==='TRUE'?'<span class="badge" style="background:#fff8e1;color:#f4b400;border:1px solid #ffe082">需協助</span>':''}
+        </div>
+      </div>
+      <div class="card-body" style="font-size:.875rem">
+        <p style="color:var(--text-muted);font-size:.75rem;margin-bottom:4px">📍 ${rep.work_location||'—'}</p>
+        <p style="font-weight:500;margin-bottom:4px">✅ 完成事項</p>
+        <p style="white-space:pre-line;color:var(--text-secondary)">${rep.completed_tasks}</p>
+        ${rep.ongoing_tasks?`<p style="font-weight:500;margin:8px 0 4px">🔄 進行中</p><p style="white-space:pre-line;color:var(--text-secondary)">${rep.ongoing_tasks}</p>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function loadOT() {
+  const r = await API.getAllOvertime({}); if (!r.success) return;
+  allOT = r.records;
+  const el = document.getElementById('otList');
+  const pending = allOT.filter(o => o.client_confirm_status === 'pending');
+  if (!pending.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">⏰</div><div class="empty-text">無待確認加班</div></div>'; return; }
+  el.innerHTML = pending.map(rec => `
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-header">
+        <div><span style="font-weight:700">${rec.name}</span><span style="font-size:.8rem;color:var(--text-muted);margin-left:8px">${rec.overtime_date}</span></div>
+        <span class="badge" style="background:#fff8e1;color:#f4b400;border:1px solid #ffe082">${rec.overtime_hours}h</span>
+      </div>
+      <div class="card-body" style="font-size:.875rem">
+        <p style="color:var(--text-secondary);margin-bottom:4px">📋 ${CONFIG.OVERTIME_TYPE[rec.overtime_type]||rec.overtime_type} ・ ${rec.start_time}～${rec.end_time}</p>
+        <p style="color:var(--text-secondary);margin-bottom:12px">${rec.reason}</p>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success btn-sm" onclick="confirmOT('${rec.overtime_id}','confirmed')">✓ 確認屬實</button>
+          <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);width:auto;padding:8px 14px;font-size:.875rem;min-height:36px" onclick="confirmOT('${rec.overtime_id}','rejected')">✕ 不確認</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function confirmOT(id, action) {
+  const r = await API.clientConfirmOvertime(id, action);
+  UI.showToast(r.message, r.success ? 'success' : 'error');
+  if (r.success) await loadOT();
+}
+
+async function loadIssues() {
+  const r = await API.getAllIssues({}); if (!r.success) return;
+  allIssues = r.records;
+  const el = document.getElementById('issueList');
+  const needReply = allIssues.filter(i => (i.need_client_response==='TRUE'||i.need_client_response===true) && i.status !== 'closed');
+  if (!needReply.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">無待回覆問題</div></div>'; return; }
+  const priorityColor = { low:'var(--success)', medium:'var(--primary)', high:'var(--warning)', urgent:'var(--danger)' };
+  el.innerHTML = needReply.map(rec => {
+    const c = priorityColor[rec.priority] || 'var(--primary)';
+    return `<div class="card" style="margin-bottom:10px">
+      <div class="card-header">
+        <div><span style="font-weight:700">${rec.name}</span><span style="font-size:.8rem;color:var(--text-muted);margin-left:8px">${rec.issue_date}</span></div>
+        <span class="badge" style="background:${c}15;color:${c};border:1px solid ${c}40">${CONFIG.ISSUE_TYPE[rec.issue_type]||rec.issue_type}</span>
+      </div>
+      <div class="card-body" style="font-size:.875rem">
+        <p style="white-space:pre-line;color:var(--text-secondary);margin-bottom:12px">${rec.description}</p>
+        ${rec.admin_response?`<div style="background:#e8f0fe;border-radius:8px;padding:10px;margin-bottom:10px"><p style="font-size:.75rem;color:var(--primary);font-weight:700;margin-bottom:4px">管理者回覆</p><p>${rec.admin_response}</p></div>`:''}
+        ${rec.client_response?`<div style="background:#f3e5f5;border-radius:8px;padding:10px;margin-bottom:10px"><p style="font-size:.75rem;color:var(--purple);font-weight:700;margin-bottom:4px">我方已回覆</p><p>${rec.client_response}</p></div>`:''}
+        ${!rec.client_response?`<div style="display:flex;gap:8px;margin-top:4px">
+          <input class="form-input dark" type="text" id="reply-${rec.issue_id}" placeholder="輸入回覆..." style="flex:1">
+          <button class="btn btn-primary btn-sm" onclick="doReply('${rec.issue_id}')" style="width:auto;padding:0 16px">回覆</button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function doReply(issueId) {
+  const input = document.getElementById(`reply-${issueId}`);
+  const response = input?.value?.trim();
+  if (!response) { UI.showToast('請輸入回覆內容','warning'); return; }
+  const r = await API.clientReplyIssue(issueId, response);
+  UI.showToast(r.message, r.success ? 'success' : 'error');
+  if (r.success) await loadIssues();
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); }
+async function doLogout() { await API.logout(); AUTH.logout(); }
 </script>
 </body>
 </html>

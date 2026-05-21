@@ -10,7 +10,7 @@
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <div class="sidebar-logo">📋</div>
+    <img src="impr-logo.png" alt="imPR" style="height:36px;filter:brightness(0) invert(1)">
     <div class="sidebar-brand">imPR 派遣系統<small>派遣人員</small></div>
   </div>
   <nav class="sidebar-nav">
@@ -82,6 +82,10 @@
         <span id="gpsIcon">📍</span>
         <span id="gpsStatus">取得位置中...</span>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-secondary)">
+        <span>🌐</span>
+        <span id="ipStatus">取得 IP 中...</span>
+      </div>
     </div>
   </div>
 
@@ -120,6 +124,7 @@ let gpsLat = '', gpsLng = '';
   document.getElementById('sidebarAvatar').textContent = currentUser.name.charAt(0);
   startClock();
   getGPS();
+  getClientIP();
   await loadTodayStatus();
   await loadRecords();
 })();
@@ -152,6 +157,21 @@ function getGPS() {
     document.getElementById('gpsIcon').textContent = '⚠️';
     document.getElementById('gpsStatus').textContent = 'GPS 取得失敗（仍可打卡）';
   }, { timeout: 8000 });
+}
+
+// 取得公網 IP（用於 IP 白名單驗證）
+let clientIP = '';
+async function getClientIP() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    clientIP = d.ip;
+    const ipEl = document.getElementById('ipStatus');
+    if (ipEl) ipEl.textContent = `目前 IP：${clientIP}`;
+  } catch(e) {
+    clientIP = '';
+    console.warn('無法取得 IP：', e);
+  }
 }
 
 async function loadTodayStatus() {
@@ -220,13 +240,16 @@ async function doClock(type) {
   const note     = document.getElementById('note').value.trim();
   if (!location) { UI.showToast('請填寫工作地點', 'warning'); return; }
 
+  // 確保已取得 IP
+  if (!clientIP) await getClientIP();
+
   let result;
   if (type === 'in') {
-    result = await API.clockIn(location, gpsLat, gpsLng, note);
+    result = await API.clockIn(location, gpsLat, gpsLng, note, clientIP);
   } else if (type === 'out') {
-    result = await API.clockOut(location, gpsLat, gpsLng, note);
+    result = await API.clockOut(location, gpsLat, gpsLng, note, clientIP);
   } else {
-    result = await API.remoteClock('in', location, gpsLat, gpsLng, note);
+    result = await API.remoteClock('in', location, gpsLat, gpsLng, note, clientIP);
   }
 
   if (result.success) {

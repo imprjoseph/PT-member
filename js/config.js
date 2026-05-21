@@ -4,7 +4,7 @@
  */
 const CONFIG = {
   // ★ 部署 GAS Web App 後，將 URL 填入此處
-  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbz0Vo6Sh-_JAl3eY54EKRlLuGjRpNXMCjkAZla0GF1q_iVIHHwhHyrQagZJGJgACWRP/exec',
+  GAS_WEB_APP_URL: '請填入 Google Apps Script Web App URL',
 
   SYSTEM_NAME: '派遣人員勤務管理系統',
   SYSTEM_SHORT: 'imPR 派遣系統',
