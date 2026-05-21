@@ -15,12 +15,16 @@ const API = (() => {
     try {
       const res = await fetch(CONFIG.GAS_WEB_APP_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // GAS CORS 需用 text/plain
-        body: JSON.stringify({ action, payload, token })
+        // GAS 不支援 CORS preflight，必須用 text/plain 避免觸發 OPTIONS
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, payload, token }),
+        redirect: 'follow'
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      // GAS 回傳 text/plain，需用 text() 再 JSON.parse
+      const raw = await res.text();
+      const data = JSON.parse(raw);
 
       // Token 過期 → 自動登出
       if (!data.success && data.message && data.message.includes('重新登入')) {
