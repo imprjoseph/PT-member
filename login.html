@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>登入 — 派遣人員勤務管理系統</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .login-page { position: relative; overflow: hidden; }
+  .login-bg-circle {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,.04); pointer-events: none;
+  }
+  .circle-1 { width: 400px; height: 400px; top: -100px; right: -100px; }
+  .circle-2 { width: 300px; height: 300px; bottom: -50px; left: -80px; }
+  .pw-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: rgba(255,255,255,.5);
+    font-size: 1rem; cursor: pointer; padding: 4px;
+  }
+  .input-wrap { position: relative; }
+</style>
+</head>
+<body>
+<div class="login-page">
+  <div class="login-bg-circle circle-1"></div>
+  <div class="login-bg-circle circle-2"></div>
+
+  <div class="login-header">
+    <div class="login-logo">📋</div>
+    <span class="login-brand">imPR 派遣管理</span>
+  </div>
+
+  <div class="login-card">
+    <h1 class="login-title">歡迎回來</h1>
+    <p class="login-subtitle">派遣人員勤務管理系統</p>
+
+    <form class="login-form" id="loginForm" onsubmit="return false;">
+      <div class="form-group">
+        <label class="form-label" for="email">帳號（Email）</label>
+        <input class="form-input" type="email" id="email" placeholder="請輸入 Email" autocomplete="email" required>
+        <span class="form-error" id="emailError"></span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">密碼</label>
+        <div class="input-wrap">
+          <input class="form-input" type="password" id="password" placeholder="請輸入密碼" autocomplete="current-password" required>
+          <button class="pw-toggle" type="button" id="pwToggle" onclick="togglePw()" tabindex="-1">👁</button>
+        </div>
+        <span class="form-error" id="pwError"></span>
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn" type="submit" onclick="doLogin()">
+        <span id="loginBtnText">登入</span>
+      </button>
+
+      <div id="loginError" style="display:none;background:rgba(219,68,55,.15);border:1px solid rgba(219,68,55,.4);border-radius:8px;padding:12px;color:#ff8a80;font-size:.875rem;text-align:center;"></div>
+    </form>
+  </div>
+
+  <div class="login-footer">
+    © 2025 新動力公共關係顧問 imPR | 版本 1.0.0
+  </div>
+</div>
+
+<!-- Loading & Toast -->
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // 若已登入直接跳轉
+  (async () => { await AUTH.guardLoginPage(); })();
+
+  function togglePw() {
+    const inp = document.getElementById('password');
+    const btn = document.getElementById('pwToggle');
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁'; }
+  }
+
+  // Enter 鍵送出
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errBox = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    // 清除舊錯誤
+    errBox.style.display = 'none';
+    document.getElementById('emailError').textContent = '';
+    document.getElementById('pwError').textContent = '';
+
+    if (!email) { document.getElementById('emailError').textContent = '請輸入帳號'; return; }
+    if (!password) { document.getElementById('pwError').textContent = '請輸入密碼'; return; }
+
+    btn.disabled = true;
+    document.getElementById('loginBtnText').textContent = '登入中...';
+
+    const result = await API.login(email, password);
+
+    btn.disabled = false;
+    document.getElementById('loginBtnText').textContent = '登入';
+
+    if (!result.success) {
+      errBox.style.display = 'block';
+      errBox.textContent = result.message || '登入失敗，請稍後再試';
+      return;
+    }
+
+    // 儲存 session
+    AUTH.setSession(result.token, result.user);
+
+    // 需要強制改密碼
+    if (result.force_change_password) {
+      window.location.href = 'change-password.html?first=1';
+      return;
+    }
+
+    // 依角色跳轉
+    const home = CONFIG.ROLE_HOME[result.user.role] || 'login.html';
+    window.location.href = home;
+  }
+</script>
+</body>
+</html>
