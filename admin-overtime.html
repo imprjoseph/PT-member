@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>加班審核</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><div class="sidebar-logo">🛡</div><div class="sidebar-brand">imPR 派遣系統<small>管理者後台</small></div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">管理功能</div>
+    <a class="nav-item" href="admin-dashboard.html"><span class="nav-icon">📊</span>總覽</a>
+    <a class="nav-item" href="admin-users.html"><span class="nav-icon">👥</span>帳號管理</a>
+    <a class="nav-item" href="admin-attendance.html"><span class="nav-icon">⏱</span>出勤管理</a>
+    <a class="nav-item active" href="admin-overtime.html"><span class="nav-icon">⏰</span>加班審核</a>
+    <a class="nav-item" href="admin-leave.html"><span class="nav-icon">🌿</span>請假審核</a>
+    <a class="nav-item" href="admin-reports.html"><span class="nav-icon">📈</span>統計報表</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="user-avatar" id="sidebarAvatar">A</div><div class="user-info"><div class="user-name" id="sidebarName">管理者</div><div class="user-role">Admin</div></div></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">⏰ 加班審核</span>
+</header>
+<main class="main-content">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="filterList('pending',this)">待審核</button>
+    <button class="tab-btn"       onclick="filterList('approved',this)">已核准</button>
+    <button class="tab-btn"       onclick="filterList('rejected',this)">已退回</button>
+    <button class="tab-btn"       onclick="filterList('',this)">全部</button>
+  </div>
+  <div id="otList"><div style="text-align:center;padding:24px;color:var(--text-muted)">載入中...</div></div>
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script><script src="js/api.js"></script><script src="js/auth.js"></script>
+<script>
+let allRecords=[], currentFilter='pending';
+(async()=>{
+  const user=await AUTH.guard(['admin']); if(!user) return;
+  document.getElementById('sidebarName').textContent=user.name;
+  document.getElementById('sidebarAvatar').textContent=user.name.charAt(0);
+  await loadAll();
+})();
+
+async function loadAll(){
+  const r=await API.getAllOvertime({}); if(!r.success) return;
+  allRecords=r.records;
+  renderList(currentFilter);
+}
+
+function filterList(status,btn){
+  currentFilter=status;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  renderList(status);
+}
+
+function renderList(status){
+  const records=status?allRecords.filter(r=>r.final_status===status):allRecords;
+  const el=document.getElementById('otList');
+  if(!records.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">⏰</div><div class="empty-text">無記錄</div></div>';return;}
+  el.innerHTML=records.map(rec=>`
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <div><span style="font-weight:700">${rec.name}</span><span style="font-size:.8rem;color:var(--text-muted);margin-left:8px">${rec.overtime_date}</span></div>
+        ${UI.statusBadge(rec.final_status)}
+      </div>
+      <div class="card-body" style="font-size:.875rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div><span style="color:var(--text-muted)">時間：</span>${rec.start_time}～${rec.end_time}（${rec.overtime_hours}h）</div>
+          <div><span style="color:var(--text-muted)">類型：</span>${CONFIG.OVERTIME_TYPE[rec.overtime_type]||rec.overtime_type}</div>
+        </div>
+        <p style="color:var(--text-secondary);margin-bottom:10px">${rec.reason}</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:.75rem;color:var(--text-muted)">數發部：${UI.statusBadge(rec.client_confirm_status)}</span>
+          <span style="font-size:.75rem;color:var(--text-muted)">管理者：${UI.statusBadge(rec.admin_approve_status)}</span>
+        </div>
+        ${rec.final_status==='pending'?`
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-success btn-sm" onclick="doApprove('${rec.overtime_id}','${rec.overtime_hours}')">✓ 核准</button>
+          <button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);width:auto;padding:8px 14px;font-size:.875rem;min-height:36px" onclick="doReject('${rec.overtime_id}')">✕ 退回</button>
+        </div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function doApprove(id,hours){
+  UI.showModal('核准加班',
+    `<div class="form-group"><label class="form-label dark" style="color:var(--text-primary)">核定時數（預設：${hours}h）</label>
+     <input class="form-input dark" type="number" id="approveHours" value="${hours}" step="0.5" min="0.5"></div>`,
+    async()=>{
+      const h=document.getElementById('approveHours')?.value;
+      const r=await API.adminApproveOvertime(id,h);
+      UI.showToast(r.message,r.success?'success':'error');
+      if(r.success) await loadAll();
+    },'確認核准');
+}
+
+async function doReject(id){
+  UI.showModal('退回加班申請','確定要退回此加班申請？',async()=>{
+    const r=await API.rejectOvertime(id);
+    UI.showToast(r.message,r.success?'success':'error');
+    if(r.success) await loadAll();
+  },'確認退回');
+}
+
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sidebarOverlay').classList.add('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show');}
+async function doLogout(){await API.logout();AUTH.logout();}
+</script>
+</body>
+</html>

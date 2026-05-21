@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>帳號管理</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><div class="sidebar-logo">🛡</div><div class="sidebar-brand">imPR 派遣系統<small>管理者後台</small></div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">管理功能</div>
+    <a class="nav-item" href="admin-dashboard.html"><span class="nav-icon">📊</span>總覽</a>
+    <a class="nav-item active" href="admin-users.html"><span class="nav-icon">👥</span>帳號管理</a>
+    <a class="nav-item" href="admin-attendance.html"><span class="nav-icon">⏱</span>出勤管理</a>
+    <a class="nav-item" href="admin-overtime.html"><span class="nav-icon">⏰</span>加班審核</a>
+    <a class="nav-item" href="admin-leave.html"><span class="nav-icon">🌿</span>請假審核</a>
+    <a class="nav-item" href="admin-reports.html"><span class="nav-icon">📈</span>統計報表</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="user-avatar" id="sidebarAvatar">A</div><div class="user-info"><div class="user-name" id="sidebarName">管理者</div><div class="user-role">Admin</div></div></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">👥 帳號管理</span>
+  <button class="btn btn-primary btn-sm" onclick="showCreateForm()" style="width:auto">＋ 新增</button>
+</header>
+<main class="main-content">
+
+  <!-- 新增帳號表單 -->
+  <div class="card" id="createForm" style="display:none">
+    <div class="card-header"><span class="card-title">➕ 新增帳號</span><button onclick="hideCreateForm()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label dark">姓名 *</label><input class="form-input dark" type="text" id="newName" placeholder="姓名"></div>
+        <div class="form-group"><label class="form-label dark">Email *</label><input class="form-input dark" type="email" id="newEmail" placeholder="email@example.com"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label dark">初始密碼 *</label><input class="form-input dark" type="text" id="newPwd" placeholder="至少8碼含英文數字" value=""></div>
+        <div class="form-group"><label class="form-label dark">角色 *</label>
+          <select class="form-input dark" id="newRole"><option value="staff">派遣人員</option><option value="client">數發部管理</option><option value="admin">管理者</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label dark">所屬單位</label><input class="form-input dark" type="text" id="newDept" placeholder="例：數位發展部"></div>
+        <div class="form-group"><label class="form-label dark">派遣案件</label><input class="form-input dark" type="text" id="newProject" placeholder="例：數發部派遣案"></div>
+      </div>
+      <div class="form-group"><label class="form-label dark">手機</label><input class="form-input dark" type="tel" id="newPhone" placeholder="0912-345-678"></div>
+      <button class="btn btn-success" onclick="doCreate()">建立帳號</button>
+      <div id="createResult" style="display:none;padding:10px;border-radius:8px;font-size:.875rem;text-align:center"></div>
+    </div>
+  </div>
+
+  <!-- 帳號列表 -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">使用者列表</span><span id="userCount" style="font-size:.85rem;color:var(--text-muted)"></span></div>
+    <div id="userList"><div style="text-align:center;padding:24px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+
+</main>
+
+<!-- 重設密碼 Modal -->
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body"  id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="modal-confirm">確認</button>
+      <button class="btn btn-ghost btn-sm"   id="modal-cancel" onclick="UI.hideModal()">取消</button>
+    </div>
+  </div>
+</div>
+<script src="js/config.js"></script><script src="js/api.js"></script><script src="js/auth.js"></script>
+<script>
+let allUsers=[];
+(async()=>{
+  const user=await AUTH.guard(['admin']);
+  if(!user) return;
+  document.getElementById('sidebarName').textContent=user.name;
+  document.getElementById('sidebarAvatar').textContent=user.name.charAt(0);
+  await loadUsers();
+})();
+
+async function loadUsers(){
+  const r=await API.getUsers(); if(!r.success) return;
+  allUsers=r.users;
+  document.getElementById('userCount').textContent=`共 ${allUsers.length} 人`;
+  renderUsers(allUsers);
+}
+
+function renderUsers(users){
+  const el=document.getElementById('userList');
+  if(!users.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">尚無使用者</div></div>';return;}
+  const roleColor={admin:'var(--primary)',staff:'var(--success)',client:'var(--purple)'};
+  el.innerHTML=users.map(u=>`<div class="list-item">
+    <div class="user-avatar" style="background:${roleColor[u.role]||'var(--primary)'};flex-shrink:0">${u.name.charAt(0)}</div>
+    <div class="list-item-main" style="margin-left:12px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="list-item-title">${u.name}</span>
+        <span class="badge" style="background:${roleColor[u.role]}15;color:${roleColor[u.role]};border:1px solid ${roleColor[u.role]}40">${CONFIG.ROLES[u.role]||u.role}</span>
+        ${u.status==='inactive'?'<span class="badge" style="background:#fce8e6;color:var(--danger);border:1px solid #f5c6c3">已停用</span>':''}
+      </div>
+      <div class="list-item-sub">${u.email} ・ ${u.department||'—'}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+      <button class="btn btn-ghost btn-sm" onclick="showReset('${u.user_id}','${u.name}')">重設密碼</button>
+      ${u.status==='active'?`<button class="btn btn-sm" style="background:#fce8e6;color:var(--danger);width:auto;padding:8px 14px;font-size:.875rem;min-height:36px" onclick="doDisable('${u.user_id}','${u.name}')">停用</button>`:''}
+    </div>
+  </div>`).join('');
+}
+
+function showCreateForm(){document.getElementById('createForm').style.display='';}
+function hideCreateForm(){document.getElementById('createForm').style.display='none';}
+
+async function doCreate(){
+  const name=document.getElementById('newName').value.trim(),email=document.getElementById('newEmail').value.trim(),
+    pwd=document.getElementById('newPwd').value.trim(),role=document.getElementById('newRole').value;
+  if(!name||!email||!pwd){UI.showToast('姓名、Email、密碼為必填','warning');return;}
+  const r=await API.createUser({name,email,init_password:pwd,role,
+    department:document.getElementById('newDept').value.trim(),
+    project:document.getElementById('newProject').value.trim(),
+    phone:document.getElementById('newPhone').value.trim()});
+  const el=document.getElementById('createResult'); el.style.display='block';
+  if(r.success){el.style.background='#e6f4ea';el.style.color='var(--success)';el.style.border='1px solid #c3e6cb';
+    el.textContent='✓ 帳號建立成功';UI.showToast('帳號建立成功','success');await loadUsers();}
+  else{el.style.background='#fce8e6';el.style.color='var(--danger)';el.style.border='1px solid #f5c6c3';el.textContent=r.message;}
+}
+
+function showReset(userId,name){
+  UI.showModal(`重設密碼 — ${name}`,
+    `<div class="form-group"><label class="form-label dark" style="color:var(--text-primary)">新密碼</label>
+     <input class="form-input dark" type="text" id="resetPwdInput" placeholder="至少8碼"></div>`,
+    async()=>{
+      const pw=document.getElementById('resetPwdInput')?.value?.trim();
+      if(!pw){UI.showToast('請輸入新密碼','warning');return;}
+      const r=await API.resetPassword(userId,pw);
+      UI.showToast(r.message,r.success?'success':'error');
+    },'確認重設');
+}
+
+async function doDisable(userId,name){
+  UI.showModal(`停用帳號`,`確定要停用 ${name} 的帳號嗎？停用後該使用者將無法登入。`,
+    async()=>{const r=await API.disableUser(userId);UI.showToast(r.message,r.success?'success':'error');if(r.success)await loadUsers();},'確認停用');
+}
+
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sidebarOverlay').classList.add('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show');}
+async function doLogout(){await API.logout();AUTH.logout();}
+</script>
+</body>
+</html>

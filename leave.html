@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>請假申請</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><div class="sidebar-logo">📋</div><div class="sidebar-brand">imPR 派遣系統<small>派遣人員</small></div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">主要功能</div>
+    <a class="nav-item" href="staff-dashboard.html"><span class="nav-icon">🏠</span>首頁</a>
+    <a class="nav-item" href="attendance.html"><span class="nav-icon">⏱</span>打卡</a>
+    <a class="nav-item" href="work-report.html"><span class="nav-icon">📝</span>工作回報</a>
+    <a class="nav-item" href="overtime.html"><span class="nav-icon">⏰</span>加班申請</a>
+    <a class="nav-item active" href="leave.html"><span class="nav-icon">🌿</span>請假申請</a>
+    <a class="nav-item" href="issue.html"><span class="nav-icon">🚨</span>問題反映</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="user-avatar" id="sidebarAvatar">—</div><div class="user-info"><div class="user-name" id="sidebarName">—</div><div class="user-role">派遣人員</div></div></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">🌿 請假申請</span>
+</header>
+<main class="main-content">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('form',this)">申請請假</button>
+    <button class="tab-btn"       onclick="switchTab('list',this)">申請記錄</button>
+  </div>
+  <div id="tabForm">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🌿 請假申請表</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label class="form-label dark">假別 *</label>
+          <select class="form-input dark" id="leaveType">
+            <option value="">請選擇假別</option>
+            <option value="personal">事假</option>
+            <option value="sick">病假</option>
+            <option value="annual">特休</option>
+            <option value="official">公假</option>
+            <option value="menstrual">生理假</option>
+            <option value="funeral">喪假</option>
+            <option value="marriage">婚假</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label dark">開始時間 *</label>
+          <input class="form-input dark" type="datetime-local" id="leaveStart">
+        </div>
+        <div class="form-group">
+          <label class="form-label dark">結束時間 *</label>
+          <input class="form-input dark" type="datetime-local" id="leaveEnd">
+        </div>
+        <div id="leaveHoursPreview" style="display:none;background:var(--primary-light);border-radius:8px;padding:10px;text-align:center;font-weight:700;color:var(--primary)"></div>
+        <div class="form-group">
+          <label class="form-label dark">請假原因 *</label>
+          <textarea class="form-input dark" id="leaveReason" rows="3" placeholder="請說明請假原因"></textarea>
+        </div>
+        <button class="btn btn-primary" id="leaveSubmitBtn" onclick="doSubmitLeave()">送出請假申請</button>
+        <div id="leaveResult" style="display:none;padding:12px;border-radius:8px;font-size:.875rem;text-align:center"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tabList" style="display:none">
+    <div id="leaveList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()"><div class="modal-box" onclick="event.stopPropagation()"><div class="modal-title" id="modal-title"></div><div class="modal-body" id="modal-body"></div><div class="modal-actions"><button class="btn btn-primary btn-sm" id="modal-confirm">確認</button><button class="btn btn-ghost btn-sm" id="modal-cancel" onclick="UI.hideModal()">取消</button></div></div></div>
+<script src="js/config.js"></script><script src="js/api.js"></script><script src="js/auth.js"></script>
+<script>
+(async()=>{
+  const user=await AUTH.guard(['staff']);
+  if(!user) return;
+  document.getElementById('sidebarName').textContent=user.name;
+  document.getElementById('sidebarAvatar').textContent=user.name.charAt(0);
+})();
+['leaveStart','leaveEnd'].forEach(id=>document.getElementById(id).addEventListener('change',calcLeaveHours));
+function calcLeaveHours(){
+  const s=document.getElementById('leaveStart').value,e=document.getElementById('leaveEnd').value,prev=document.getElementById('leaveHoursPreview');
+  if(s&&e){const diff=(new Date(e)-new Date(s))/3600000;if(diff>0){prev.style.display='block';prev.textContent=`請假時數：${diff.toFixed(2)} 小時`;}else prev.style.display='none';}
+}
+async function doSubmitLeave(){
+  const type=document.getElementById('leaveType').value,s=document.getElementById('leaveStart').value,
+    e=document.getElementById('leaveEnd').value,reason=document.getElementById('leaveReason').value.trim();
+  if(!type||!s||!e||!reason){UI.showToast('請填寫必填欄位','warning');return;}
+  const btn=document.getElementById('leaveSubmitBtn'); btn.disabled=true; btn.textContent='送出中...';
+  const r=await API.submitLeave({leave_type:type,start_time:s,end_time:e,reason});
+  btn.disabled=false; btn.textContent='送出請假申請';
+  const el=document.getElementById('leaveResult'); el.style.display='block';
+  if(r.success){el.style.background='#e6f4ea';el.style.color='var(--success)';el.style.border='1px solid #c3e6cb';
+    el.textContent=`✓ ${r.message}（${r.leave_hours} 小時）`;UI.showToast(r.message,'success');}
+  else{el.style.background='#fce8e6';el.style.color='var(--danger)';el.style.border='1px solid #f5c6c3';el.textContent=r.message;}
+}
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  document.getElementById('tabForm').style.display=tab==='form'?'':'none';
+  document.getElementById('tabList').style.display=tab==='list'?'':'none';
+  if(tab==='list') loadList();
+}
+async function loadList(){
+  const r=await API.getMyLeave({limit:20}); const el=document.getElementById('leaveList');
+  if(!r.success||!r.records.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🌿</div><div class="empty-text">尚無請假記錄</div></div>';return;}
+  el.innerHTML=r.records.map(rec=>`<div class="list-item">
+    <div class="list-item-main">
+      <div class="list-item-title">${CONFIG.LEAVE_TYPE[rec.leave_type]||rec.leave_type}</div>
+      <div class="list-item-sub">${UI.formatDateTime(rec.start_time)} ～ ${UI.formatDateTime(rec.end_time)}</div>
+      <div class="list-item-sub" style="margin-top:2px">${rec.reason}</div>
+    </div>
+    <div class="list-item-right">${UI.statusBadge(rec.final_status)}<div style="font-size:.75rem;color:var(--text-muted);margin-top:4px">${rec.leave_hours}h</div></div>
+  </div>`).join('');
+}
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sidebarOverlay').classList.add('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show');}
+async function doLogout(){await API.logout();AUTH.logout();}
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>問題反映</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header"><div class="sidebar-logo">📋</div><div class="sidebar-brand">imPR 派遣系統<small>派遣人員</small></div></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">主要功能</div>
+    <a class="nav-item" href="staff-dashboard.html"><span class="nav-icon">🏠</span>首頁</a>
+    <a class="nav-item" href="attendance.html"><span class="nav-icon">⏱</span>打卡</a>
+    <a class="nav-item" href="work-report.html"><span class="nav-icon">📝</span>工作回報</a>
+    <a class="nav-item" href="overtime.html"><span class="nav-icon">⏰</span>加班申請</a>
+    <a class="nav-item" href="leave.html"><span class="nav-icon">🌿</span>請假申請</a>
+    <a class="nav-item active" href="issue.html"><span class="nav-icon">🚨</span>問題反映</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user"><div class="user-avatar" id="sidebarAvatar">—</div><div class="user-info"><div class="user-name" id="sidebarName">—</div><div class="user-role">派遣人員</div></div></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:transparent;color:rgba(255,255,255,.6);font-size:.85rem;cursor:pointer">登出</button>
+  </div>
+</aside>
+<header class="topnav">
+  <button class="topnav-menu" onclick="openSidebar()">☰</button>
+  <span class="topnav-title">🚨 問題反映</span>
+</header>
+<main class="main-content">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('form',this)">提出問題</button>
+    <button class="tab-btn"       onclick="switchTab('list',this)">我的問題</button>
+  </div>
+  <div id="tabForm">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🚨 問題反映表</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="form-group">
+          <label class="form-label dark">問題類型 *</label>
+          <select class="form-input dark" id="issueType">
+            <option value="">請選擇類型</option>
+            <option value="work_scope">工作範圍疑義</option>
+            <option value="overtime">加班問題</option>
+            <option value="workload">工作量過大</option>
+            <option value="communication">溝通問題</option>
+            <option value="equipment">設備問題</option>
+            <option value="schedule">排班問題</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label dark">優先程度</label>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <label class="priority-btn" data-val="low">
+              <input type="radio" name="priority" value="low" style="display:none">
+              <span style="display:block;text-align:center;padding:8px;border:2px solid var(--border);border-radius:8px;font-size:.85rem;cursor:pointer;transition:all .2s" id="p-low">低</span>
+            </label>
+            <label class="priority-btn" data-val="medium">
+              <input type="radio" name="priority" value="medium" checked style="display:none">
+              <span style="display:block;text-align:center;padding:8px;border:2px solid var(--primary);border-radius:8px;font-size:.85rem;cursor:pointer;background:var(--primary-light);color:var(--primary);font-weight:700" id="p-medium">中</span>
+            </label>
+            <label class="priority-btn" data-val="high">
+              <input type="radio" name="priority" value="high" style="display:none">
+              <span style="display:block;text-align:center;padding:8px;border:2px solid var(--border);border-radius:8px;font-size:.85rem;cursor:pointer;transition:all .2s" id="p-high">高</span>
+            </label>
+            <label class="priority-btn" data-val="urgent">
+              <input type="radio" name="priority" value="urgent" style="display:none">
+              <span style="display:block;text-align:center;padding:8px;border:2px solid var(--border);border-radius:8px;font-size:.85rem;cursor:pointer;transition:all .2s" id="p-urgent">緊急</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label dark">問題說明 *</label>
+          <textarea class="form-input dark" id="issueDesc" rows="4" placeholder="請詳細說明問題情況、發生時間、影響範圍等"></textarea>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" id="needClient" style="width:18px;height:18px">
+          <span>此問題需要數發部回應</span>
+        </label>
+        <button class="btn btn-danger" id="issueSubmitBtn" onclick="doSubmitIssue()">送出問題反映</button>
+        <div id="issueResult" style="display:none;padding:12px;border-radius:8px;font-size:.875rem;text-align:center"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tabList" style="display:none">
+    <div id="issueList"><div style="text-align:center;padding:20px;color:var(--text-muted)">載入中...</div></div>
+  </div>
+</main>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+<div id="modal-overlay" onclick="UI.hideModal()"><div class="modal-box" onclick="event.stopPropagation()"><div class="modal-title" id="modal-title"></div><div class="modal-body" id="modal-body"></div><div class="modal-actions"><button class="btn btn-primary btn-sm" id="modal-confirm">確認</button><button class="btn btn-ghost btn-sm" id="modal-cancel" onclick="UI.hideModal()">取消</button></div></div></div>
+<script src="js/config.js"></script><script src="js/api.js"></script><script src="js/auth.js"></script>
+<script>
+(async()=>{
+  const user=await AUTH.guard(['staff']);
+  if(!user) return;
+  document.getElementById('sidebarName').textContent=user.name;
+  document.getElementById('sidebarAvatar').textContent=user.name.charAt(0);
+})();
+// 優先度選擇視覺效果
+document.querySelectorAll('.priority-btn input').forEach(radio=>{
+  radio.addEventListener('change',()=>{
+    document.querySelectorAll('.priority-btn span').forEach(s=>{
+      s.style.border='2px solid var(--border)';s.style.background='';s.style.color='';s.style.fontWeight='';
+    });
+    const lbl=radio.parentElement.querySelector('span');
+    const colors={low:'var(--success)',medium:'var(--primary)',high:'var(--warning)',urgent:'var(--danger)'};
+    const c=colors[radio.value]||'var(--primary)';
+    lbl.style.border=`2px solid ${c}`;lbl.style.background=`${c}15`;lbl.style.color=c;lbl.style.fontWeight='700';
+  });
+});
+
+async function doSubmitIssue(){
+  const type=document.getElementById('issueType').value, desc=document.getElementById('issueDesc').value.trim();
+  if(!type||!desc){UI.showToast('請填寫必填欄位','warning');return;}
+  const priority=document.querySelector('input[name="priority"]:checked')?.value||'medium';
+  const btn=document.getElementById('issueSubmitBtn'); btn.disabled=true; btn.textContent='送出中...';
+  const r=await API.submitIssue({issue_type:type,description:desc,priority,
+    need_client_response:document.getElementById('needClient').checked?'TRUE':'FALSE'});
+  btn.disabled=false; btn.textContent='送出問題反映';
+  const el=document.getElementById('issueResult'); el.style.display='block';
+  if(r.success){el.style.background='#e6f4ea';el.style.color='var(--success)';el.style.border='1px solid #c3e6cb';
+    el.textContent='✓ '+r.message;UI.showToast(r.message,'success');}
+  else{el.style.background='#fce8e6';el.style.color='var(--danger)';el.style.border='1px solid #f5c6c3';el.textContent=r.message;}
+}
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  document.getElementById('tabForm').style.display=tab==='form'?'':'none';
+  document.getElementById('tabList').style.display=tab==='list'?'':'none';
+  if(tab==='list') loadList();
+}
+const priorityColor={low:'var(--success)',medium:'var(--primary)',high:'var(--warning)',urgent:'var(--danger)'};
+async function loadList(){
+  const r=await API.getMyIssues(); const el=document.getElementById('issueList');
+  if(!r.success||!r.records.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">目前沒有問題反映</div></div>';return;}
+  el.innerHTML=r.records.map(rec=>{
+    const c=priorityColor[rec.priority]||'var(--primary)';
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <div><span style="font-weight:700">${CONFIG.ISSUE_TYPE[rec.issue_type]||rec.issue_type}</span>
+          <span style="font-size:.75rem;color:var(--text-muted);margin-left:8px">${rec.issue_date}</span></div>
+        <div style="display:flex;gap:6px">
+          <span class="badge" style="background:${c}15;color:${c};border:1px solid ${c}40">${CONFIG.PRIORITY[rec.priority]||rec.priority}</span>
+          ${UI.statusBadge(rec.status)}
+        </div>
+      </div>
+      <div class="card-body" style="font-size:.875rem">
+        <p style="white-space:pre-line;color:var(--text-secondary);margin-bottom:${rec.admin_response?'10px':'0'}">${rec.description}</p>
+        ${rec.admin_response?`<div style="background:#e8f0fe;border-radius:8px;padding:10px;margin-top:8px"><p style="font-size:.75rem;color:var(--primary);font-weight:700;margin-bottom:4px">📩 管理者回覆</p><p style="color:var(--text-secondary)">${rec.admin_response}</p></div>`:''}
+        ${rec.client_response?`<div style="background:#f3e5f5;border-radius:8px;padding:10px;margin-top:8px"><p style="font-size:.75rem;color:var(--purple);font-weight:700;margin-bottom:4px">📩 數發部回覆</p><p style="color:var(--text-secondary)">${rec.client_response}</p></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sidebarOverlay').classList.add('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show');}
+async function doLogout(){await API.logout();AUTH.logout();}
+</script>
+</body>
+</html>
