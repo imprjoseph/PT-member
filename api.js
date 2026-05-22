@@ -1,168 +1,106 @@
 /**
- * api.js
- * 統一 API 呼叫層 - 所有前端與 GAS 的溝通透過此模組
+ * config.js
+ * 系統設定 - 請將 GAS Web App URL 填入後上傳
  */
-const API = (() => {
-  async function call(action, payload = {}, showLoading = true) {
-    if (CONFIG.GAS_WEB_APP_URL === '請填入 Google Apps Script Web App URL') {
-      console.error('尚未設定 GAS_WEB_APP_URL');
-      return { success: false, message: '系統尚未完成設定，請聯繫管理員' };
-    }
+const CONFIG = {
+  // ★ 部署 GAS Web App 後，將 URL 填入此處
+  GAS_WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbxuUu9GwsYI2jXI5e4fuN-bs3asJNyrliXVVA6rNCJ-mCJ1mLNn4j_hjXIqrkM2VclF/exec',
 
-    const token = AUTH.getToken();
-    if (showLoading) UI.showLoading();
+  SYSTEM_NAME: '派遣人員勤務管理系統',
+  SYSTEM_SHORT: 'imPR 派遣系統',
+  TOKEN_KEY: 'dispatch_token',
+  USER_KEY: 'dispatch_user',
+  TOKEN_EXPIRE_HOURS: 12,
 
-    try {
-      const res = await fetch(CONFIG.GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // GAS CORS 需用 text/plain
-        body: JSON.stringify({ action, payload, token })
-      });
+  ROLES: {
+    admin: '本公司管理者',
+    staff: '派遣人員',
+    client: '數發部管理人員'
+  },
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+  ROLE_HOME: {
+    admin: 'admin-dashboard.html',
+    staff: 'staff-dashboard.html',
+    client: 'client-dashboard.html'
+  },
 
-      // Token 過期 → 自動登出
-      if (!data.success && data.message && data.message.includes('重新登入')) {
-        AUTH.logout();
-        return data;
-      }
+  ATTENDANCE_TYPE: {
+    normal: '一般打卡',
+    remote: '遠端打卡',
+    correction: '補登打卡'
+  },
 
-      return data;
-    } catch (err) {
-      console.error('API Error:', err);
-      return { success: false, message: '網路錯誤，請稍後再試' };
-    } finally {
-      if (showLoading) UI.hideLoading();
-    }
+  OVERTIME_TYPE: {
+    weekday: '平日加班',
+    holiday: '假日加班',
+    remote: '遠端加班',
+    event_support: '活動支援加班',
+    emergency: '緊急任務加班'
+  },
+
+  LEAVE_TYPE: {
+    personal: '事假',
+    sick: '病假',
+    annual: '特休',
+    official: '公假',
+    menstrual: '生理假',
+    funeral: '喪假',
+    marriage: '婚假',
+    other: '其他'
+  },
+
+  ISSUE_TYPE: {
+    work_scope: '工作範圍疑義',
+    overtime: '加班問題',
+    workload: '工作量過大',
+    communication: '溝通問題',
+    equipment: '設備問題',
+    schedule: '排班問題',
+    other: '其他'
+  },
+
+  PRIORITY: {
+    low: '低',
+    medium: '中',
+    high: '高',
+    urgent: '緊急'
+  },
+
+  STATUS_LABEL: {
+    pending: '待審核',
+    approved: '已核准',
+    rejected: '已退回',
+    confirmed: '已確認',
+    cancelled: '已取消',
+    closed: '已結案',
+    processing: '處理中',
+    replied: '已回覆',
+    open: '待處理',
+    active: '啟用',
+    inactive: '停用',
+    normal: '正常',
+    late: '遲到',
+    early_leave: '早退',
+    missing_clock_in: '缺上班卡',
+    missing_clock_out: '缺下班卡',
+    pending_review: '待審核'
+  },
+
+  STATUS_COLOR: {
+    pending: '#f4b400',
+    approved: '#0f9d58',
+    rejected: '#db4437',
+    confirmed: '#1a73e8',
+    cancelled: '#9e9e9e',
+    closed: '#607d8b',
+    processing: '#ff6d00',
+    replied: '#1a73e8',
+    open: '#db4437',
+    normal: '#0f9d58',
+    late: '#ff6d00',
+    early_leave: '#ff6d00',
+    missing_clock_in: '#db4437',
+    missing_clock_out: '#db4437',
+    pending_review: '#f4b400'
   }
-
-  return {
-    // Auth
-    login: (email, password) => call('login', { email, password }, true),
-    logout: () => call('logout', {}, false),
-    verifyToken: () => call('verifyToken', {}, false),
-    changePassword: (old_password, new_password) => call('changePassword', { old_password, new_password }),
-
-    // Users
-    getUsers: () => call('getUsers', {}),
-    createUser: (data) => call('createUser', data),
-    updateUser: (data) => call('updateUser', data),
-    disableUser: (user_id) => call('disableUser', { user_id }),
-    resetPassword: (user_id, new_password) => call('resetPassword', { user_id, new_password }),
-
-    // Attendance
-    clockIn: (location, lat, lng, note) => call('clockIn', { location, lat, lng, note }),
-    clockOut: (location, lat, lng, note) => call('clockOut', { location, lat, lng, note }),
-    remoteClock: (type, location, lat, lng, note) => call('remoteClock', { type, location, lat, lng, note }),
-    getTodayAttendance: () => call('getTodayAttendance', {}),
-    getAttendanceList: (params) => call('getAttendanceList', params || {}),
-    exportAttendanceCsv: (params) => call('exportAttendanceCsv', params || {}),
-
-    // WorkReports
-    submitWorkReport: (data) => call('submitWorkReport', data),
-    getMyWorkReports: (params) => call('getMyWorkReports', params || {}),
-    getAllWorkReports: (params) => call('getAllWorkReports', params || {}),
-    getWorkReportStats: (params) => call('getWorkReportStats', params || {}),
-
-    // Overtime
-    submitOvertime: (data) => call('submitOvertime', data),
-    getMyOvertime: (params) => call('getMyOvertime', params || {}),
-    getAllOvertime: (params) => call('getAllOvertime', params || {}),
-    clientConfirmOvertime: (overtime_id, action) => call('clientConfirmOvertime', { overtime_id, action }),
-    adminApproveOvertime: (overtime_id, approved_hours) => call('adminApproveOvertime', { overtime_id, approved_hours }),
-    rejectOvertime: (overtime_id, reason) => call('rejectOvertime', { overtime_id, reason }),
-    getOvertimeStats: (params) => call('getOvertimeStats', params || {}),
-    exportOvertimeCsv: (params) => call('exportOvertimeCsv', params || {}),
-
-    // Leave
-    submitLeave: (data) => call('submitLeave', data),
-    getMyLeave: (params) => call('getMyLeave', params || {}),
-    getAllLeave: (params) => call('getAllLeave', params || {}),
-    adminApproveLeave: (leave_id) => call('adminApproveLeave', { leave_id }),
-    rejectLeave: (leave_id, reason) => call('rejectLeave', { leave_id, reason }),
-    getLeaveStats: (params) => call('getLeaveStats', params || {}),
-    exportLeaveCsv: (params) => call('exportLeaveCsv', params || {}),
-
-    // Issues
-    submitIssue: (data) => call('submitIssue', data),
-    getMyIssues: () => call('getMyIssues', {}),
-    getAllIssues: (params) => call('getAllIssues', params || {}),
-    adminReplyIssue: (issue_id, response) => call('adminReplyIssue', { issue_id, response }),
-    clientReplyIssue: (issue_id, response) => call('clientReplyIssue', { issue_id, response }),
-    closeIssue: (issue_id) => call('closeIssue', { issue_id }),
-    getIssueStats: () => call('getIssueStats', {}),
-
-    // Dashboard
-    getStaffDashboard: () => call('getStaffDashboard', {}),
-    getAdminDashboard: () => call('getAdminDashboard', {}),
-    getClientDashboard: () => call('getClientDashboard', {})
-  };
-})();
-
-// ── UI 工具 ────────────────────────────────────────────────────
-const UI = (() => {
-  function showLoading() {
-    const el = document.getElementById('loading-overlay');
-    if (el) el.classList.add('active');
-  }
-
-  function hideLoading() {
-    const el = document.getElementById('loading-overlay');
-    if (el) el.classList.remove('active');
-  }
-
-  function showToast(message, type = 'info', duration = 3000) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${message}</span>`;
-    container.appendChild(toast);
-
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
-  }
-
-  function showModal(title, content, onConfirm, confirmText = '確認', cancelText = '取消') {
-    const modal = document.getElementById('modal-overlay');
-    if (!modal) return;
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = content;
-    document.getElementById('modal-confirm').textContent = confirmText;
-    document.getElementById('modal-cancel').textContent = cancelText;
-    document.getElementById('modal-confirm').onclick = () => {
-      hideModal();
-      if (onConfirm) onConfirm();
-    };
-    modal.classList.add('active');
-  }
-
-  function hideModal() {
-    const modal = document.getElementById('modal-overlay');
-    if (modal) modal.classList.remove('active');
-  }
-
-  function statusBadge(status) {
-    const label = CONFIG.STATUS_LABEL[status] || status;
-    const color = CONFIG.STATUS_COLOR[status] || '#9e9e9e';
-    return `<span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40">${label}</span>`;
-  }
-
-  function formatDateTime(str) {
-    if (!str) return '—';
-    return str.toString().substring(0, 16);
-  }
-
-  function formatDate(str) {
-    if (!str) return '—';
-    return str.toString().substring(0, 10);
-  }
-
-  return { showLoading, hideLoading, showToast, showModal, hideModal, statusBadge, formatDateTime, formatDate };
-})();
+};
