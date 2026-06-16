@@ -54,6 +54,7 @@ const API = (() => {
     updateUser: (data) => call('updateUser', data),
     disableUser: (user_id) => call('disableUser', { user_id }),
     resetPassword: (user_id, new_password) => call('resetPassword', { user_id, new_password }),
+    resetUserIP: (user_id) => call('resetUserIP', { user_id }),
 
     // Attendance
     clockIn: (location, lat, lng, note, client_ip) => call('clockIn', { location, lat, lng, note, client_ip }),
