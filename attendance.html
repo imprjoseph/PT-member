@@ -59,24 +59,28 @@
         <button class="clock-btn clock-btn-out" id="btnOut"    onclick="doClock('out')">
           <span class="clock-icon">🔴</span>下班打卡
         </button>
-        <button class="clock-btn clock-btn-remote" id="btnRemote" onclick="doClock('remote_in')" style="grid-column:1/-1">
-          <span class="clock-icon">📡</span>遠端打卡（上班）
+        <button class="clock-btn clock-btn-remote" id="btnRemote" onclick="showRemoteLocationInput()" style="grid-column:1/-1">
+          <span class="clock-icon">📡</span>遠端打卡（出差／視訊／居家辦公）
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 地點備註 -->
+  <!-- 備註（選填，地點自動代入） -->
   <div class="card">
     <div class="card-header"><span class="card-title">📍 打卡資訊</span></div>
     <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-      <div class="form-group">
-        <label class="form-label dark">工作地點</label>
-        <input class="form-input dark" type="text" id="location" placeholder="例：數位部 4F、遠端辦公" value="">
+      <div id="locationDisplay" style="background:var(--bg-app);border-radius:8px;padding:12px;font-size:.875rem;color:var(--text-secondary)">
+        📍 打卡地點：<span id="locationText" style="font-weight:600;color:var(--text-primary)">辦公室（系統自動記錄）</span>
+      </div>
+      <div class="form-group" id="remoteLocationGroup" style="display:none">
+        <label class="form-label dark">遠端打卡地點 <span style="color:var(--danger)">*</span></label>
+        <input class="form-input dark" type="text" id="remoteLocation" placeholder="例：客戶現場、住家、咖啡廳、數位部 4F">
+        <span class="form-hint">遠端打卡需註記實際所在地點</span>
       </div>
       <div class="form-group">
         <label class="form-label dark">備註（選填）</label>
-        <input class="form-input dark" type="text" id="note" placeholder="例：出差、視訊會議">
+        <input class="form-input dark" type="text" id="note" placeholder="例：出差、視訊會議、提早到">
       </div>
       <div style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-secondary)">
         <span id="gpsIcon">📍</span>
@@ -84,7 +88,10 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-secondary)">
         <span>🌐</span>
-        <span id="ipStatus">取得 IP 中...</span>
+        <span id="ipStatus">取得網路資訊中...</span>
+      </div>
+      <div id="firstTimeNotice" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;font-size:.8rem;color:#795548;line-height:1.5">
+        ℹ️ 首次打卡將自動把目前網路環境設定為您的「辦公室位置」，之後打卡系統會自動比對，請確保是在公司網路下進行首次打卡。
       </div>
     </div>
   </div>
@@ -116,6 +123,7 @@
 <script>
 let currentUser = null;
 let gpsLat = '', gpsLng = '';
+let clientIP = '';
 
 (async () => {
   currentUser = await AUTH.guard(['staff']);
@@ -124,7 +132,7 @@ let gpsLat = '', gpsLng = '';
   document.getElementById('sidebarAvatar').textContent = currentUser.name.charAt(0);
   startClock();
   getGPS();
-  getClientIP();
+  await getClientIP();
   await loadTodayStatus();
   await loadRecords();
 })();
@@ -152,25 +160,22 @@ function getGPS() {
     gpsLat = pos.coords.latitude.toFixed(6);
     gpsLng = pos.coords.longitude.toFixed(6);
     document.getElementById('gpsIcon').textContent = '✅';
-    document.getElementById('gpsStatus').textContent = `GPS 已取得 (${gpsLat}, ${gpsLng})`;
+    document.getElementById('gpsStatus').textContent = `位置已取得`;
   }, () => {
     document.getElementById('gpsIcon').textContent = '⚠️';
     document.getElementById('gpsStatus').textContent = 'GPS 取得失敗（仍可打卡）';
   }, { timeout: 8000 });
 }
 
-// 取得公網 IP（用於 IP 白名單驗證）
-let clientIP = '';
 async function getClientIP() {
   try {
     const r = await fetch('https://api.ipify.org?format=json');
     const d = await r.json();
     clientIP = d.ip;
-    const ipEl = document.getElementById('ipStatus');
-    if (ipEl) ipEl.textContent = `目前 IP：${clientIP}`;
+    document.getElementById('ipStatus').textContent = `網路環境已確認`;
   } catch(e) {
     clientIP = '';
-    console.warn('無法取得 IP：', e);
+    document.getElementById('ipStatus').textContent = '網路資訊取得失敗（不影響打卡）';
   }
 }
 
@@ -199,9 +204,7 @@ async function loadTodayStatus() {
         ${rec.work_hours?`<div style="text-align:center"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">工時</div>
           <div style="font-size:1.5rem;font-weight:700;color:var(--primary);font-family:var(--font-mono)">${rec.work_hours}h</div></div>`:''}
       </div>`;
-    // 已打上班卡 → 禁用上班按鈕
     if (rec.clock_in_time)  { btnIn.disabled = true; btnRemote.disabled = true; }
-    // 已打下班卡 → 禁用下班按鈕
     if (rec.clock_out_time) { btnOut.disabled = true; }
   } else {
     el.innerHTML = `<div style="text-align:center;color:var(--warning);font-weight:500;padding:8px">今日尚未打卡</div>`;
@@ -235,12 +238,31 @@ async function loadRecords() {
   }).join('');
 }
 
-async function doClock(type) {
-  const location = document.getElementById('location').value.trim();
-  const note     = document.getElementById('note').value.trim();
-  if (!location) { UI.showToast('請填寫工作地點', 'warning'); return; }
+function showRemoteLocationInput() {
+  const group = document.getElementById('remoteLocationGroup');
+  const isHidden = group.style.display === 'none';
+  group.style.display = isHidden ? '' : 'none';
+  if (isHidden) {
+    document.getElementById('remoteLocation').focus();
+    UI.showToast('請輸入遠端打卡地點後，再次點擊送出', 'info');
+    document.getElementById('btnRemote').innerHTML = '<span class="clock-icon">✅</span>確認送出遠端打卡';
+    document.getElementById('btnRemote').setAttribute('onclick', 'doClock(\'remote_in\')');
+  }
+}
 
-  // 確保已取得 IP
+async function doClock(type) {
+  const note = document.getElementById('note').value.trim();
+  let location = '辦公室';
+
+  if (type === 'remote_in') {
+    location = document.getElementById('remoteLocation').value.trim();
+    if (!location) {
+      UI.showToast('請輸入遠端打卡地點', 'warning');
+      document.getElementById('remoteLocation').focus();
+      return;
+    }
+  }
+
   if (!clientIP) await getClientIP();
 
   let result;
@@ -249,7 +271,7 @@ async function doClock(type) {
   } else if (type === 'out') {
     result = await API.clockOut(location, gpsLat, gpsLng, note, clientIP);
   } else {
-    result = await API.remoteClock('in', location, gpsLat, gpsLng, note, clientIP);
+    result = await API.remoteClock('in', location, gpsLat, gpsLng, note);
   }
 
   if (result.success) {
