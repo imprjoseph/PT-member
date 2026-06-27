@@ -11,6 +11,8 @@ const CONFIG = {
   TOKEN_KEY: 'dispatch_token',
   USER_KEY: 'dispatch_user',
   TOKEN_EXPIRE_HOURS: 12,
+  AUTH_CACHE_MS: 60000,
+  AUTH_VERIFIED_KEY: 'dispatch_verified_at',
 
   ROLES: {
     admin: '本公司管理者',

@@ -3,6 +3,8 @@
  * 統一 API 呼叫層 - 所有前端與 GAS 的溝通透過此模組
  */
 const API = (() => {
+  const REQUEST_TIMEOUT_MS = 20000;
+
   async function call(action, payload = {}, showLoading = true) {
     if (CONFIG.GAS_WEB_APP_URL === '請填入 Google Apps Script Web App URL') {
       console.error('尚未設定 GAS_WEB_APP_URL');
@@ -12,13 +14,17 @@ const API = (() => {
     const token = AUTH.getToken();
     if (showLoading) UI.showLoading();
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const res = await fetch(CONFIG.GAS_WEB_APP_URL, {
         method: 'POST',
         // GAS 不支援 CORS preflight，必須用 text/plain 避免觸發 OPTIONS
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action, payload, token }),
-        redirect: 'follow'
+        redirect: 'follow',
+        signal: controller.signal
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -35,15 +41,19 @@ const API = (() => {
       return data;
     } catch (err) {
       console.error('API Error:', err);
-      return { success: false, message: '網路錯誤，請稍後再試' };
+      return {
+        success: false,
+        message: err.name === 'AbortError' ? '連線逾時，請稍後再試' : '網路錯誤，請稍後再試'
+      };
     } finally {
+      clearTimeout(timeoutId);
       if (showLoading) UI.hideLoading();
     }
   }
 
   return {
     // Auth
-    login: (email, password) => call('login', { email, password }, true),
+    login: (email, password) => call('login', { email, password }, false),
     logout: () => call('logout', {}, false),
     verifyToken: () => call('verifyToken', {}, false),
     changePassword: (old_password, new_password) => call('changePassword', { old_password, new_password }),
@@ -112,14 +122,18 @@ const API = (() => {
 
 // ── UI 工具 ────────────────────────────────────────────────────
 const UI = (() => {
+  let loadingCount = 0;
+
   function showLoading() {
+    loadingCount += 1;
     const el = document.getElementById('loading-overlay');
     if (el) el.classList.add('active');
   }
 
   function hideLoading() {
+    loadingCount = Math.max(0, loadingCount - 1);
     const el = document.getElementById('loading-overlay');
-    if (el) el.classList.remove('active');
+    if (el && loadingCount === 0) el.classList.remove('active');
   }
 
   function showToast(message, type = 'info', duration = 3000) {

@@ -18,12 +18,21 @@ const AUTH = (() => {
   function setSession(token, user) {
     localStorage.setItem(CONFIG.TOKEN_KEY, token);
     localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
+    sessionStorage.setItem(CONFIG.AUTH_VERIFIED_KEY, String(Date.now()));
   }
 
   function logout() {
     localStorage.removeItem(CONFIG.TOKEN_KEY);
     localStorage.removeItem(CONFIG.USER_KEY);
+    sessionStorage.removeItem(CONFIG.AUTH_VERIFIED_KEY);
     window.location.href = 'login.html';
+  }
+
+  function getFreshCachedUser() {
+    const user = getUser();
+    const verifiedAt = Number(sessionStorage.getItem(CONFIG.AUTH_VERIFIED_KEY) || 0);
+    if (!user || !verifiedAt || Date.now() - verifiedAt > CONFIG.AUTH_CACHE_MS) return null;
+    return user;
   }
 
   /**
@@ -37,6 +46,15 @@ const AUTH = (() => {
       return null;
     }
 
+    const cachedUser = getFreshCachedUser();
+    if (cachedUser) {
+      if (allowedRoles.length > 0 && !allowedRoles.includes(cachedUser.role)) {
+        window.location.href = CONFIG.ROLE_HOME[cachedUser.role] || 'login.html';
+        return null;
+      }
+      return cachedUser;
+    }
+
     const result = await API.verifyToken();
     if (!result.success) {
       logout();
@@ -47,9 +65,7 @@ const AUTH = (() => {
 
     // 更新本地用戶快取
     const storedUser = getUser();
-    if (storedUser) {
-      setSession(token, { ...storedUser, ...user });
-    }
+    setSession(token, { ...(storedUser || {}), ...user });
 
     // 角色檢查
     if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
@@ -68,8 +84,15 @@ const AUTH = (() => {
     const token = getToken();
     if (!token) return;
 
+    const cachedUser = getFreshCachedUser();
+    if (cachedUser) {
+      window.location.href = CONFIG.ROLE_HOME[cachedUser.role] || 'login.html';
+      return;
+    }
+
     const result = await API.verifyToken();
     if (result.success) {
+      setSession(token, { ...(getUser() || {}), ...result.user });
       const home = CONFIG.ROLE_HOME[result.user.role] || 'login.html';
       window.location.href = home;
     }
