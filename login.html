@@ -9,13 +9,13 @@
   .login-page { position: relative; overflow: hidden; }
   .login-bg-circle {
     position: absolute; border-radius: 50%;
-    background: rgba(255,255,255,.04); pointer-events: none;
+    background: rgba(26,115,232,.05); pointer-events: none;
   }
   .circle-1 { width: 400px; height: 400px; top: -100px; right: -100px; }
   .circle-2 { width: 300px; height: 300px; bottom: -50px; left: -80px; }
   .pw-toggle {
     position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; color: rgba(255,255,255,.5);
+    background: none; border: none; color: var(--text-secondary);
     font-size: 1rem; cursor: pointer; padding: 4px;
   }
   .input-wrap { position: relative; }
@@ -26,15 +26,15 @@
   <div class="login-bg-circle circle-1"></div>
   <div class="login-bg-circle circle-2"></div>
 
-  <div class="login-header">
-    <img src="impr-logo.png" alt="imPR" style="height:32px">
-  </div>
-
   <div class="login-card">
+    <div class="login-card-brand">
+      <img class="login-card-logo" src="impr-logo.png" alt="imPR">
+      <div class="login-card-name">派遣人員勤務管理系統</div>
+    </div>
     <h1 class="login-title">歡迎回來</h1>
-    <p class="login-subtitle">派遣人員勤務管理系統</p>
+    <p class="login-subtitle">請使用公司帳號登入</p>
 
-    <form class="login-form" id="loginForm" onsubmit="return false;">
+    <form class="login-form" id="loginForm" onsubmit="doLogin(event)">
       <div class="form-group">
         <label class="form-label" for="email">帳號（Email）</label>
         <input class="form-input" type="email" id="email" placeholder="請輸入 Email" autocomplete="email" required>
@@ -45,21 +45,21 @@
         <label class="form-label" for="password">密碼</label>
         <div class="input-wrap">
           <input class="form-input" type="password" id="password" placeholder="請輸入密碼" autocomplete="current-password" required>
-          <button class="pw-toggle" type="button" id="pwToggle" onclick="togglePw()" tabindex="-1">👁</button>
+          <button class="pw-toggle" type="button" id="pwToggle" onclick="togglePw()" aria-label="顯示密碼">👁</button>
         </div>
         <span class="form-error" id="pwError"></span>
       </div>
 
-      <button class="btn btn-primary" id="loginBtn" type="submit" onclick="doLogin()">
+      <button class="btn btn-primary" id="loginBtn" type="submit">
         <span id="loginBtnText">登入</span>
       </button>
 
-      <div id="loginError" style="display:none;background:rgba(219,68,55,.15);border:1px solid rgba(219,68,55,.4);border-radius:8px;padding:12px;color:#ff8a80;font-size:.875rem;text-align:center;"></div>
+      <div id="loginError" role="alert" aria-live="polite" style="display:none;background:#fce8e6;border:1px solid #f5c6c3;border-radius:8px;padding:12px;color:#b31412;font-size:.875rem;text-align:center;"></div>
     </form>
-  </div>
 
-  <div class="login-footer">
-    © 2025 新動力公共關係顧問 imPR | 版本 1.0.0
+    <div class="login-footer">
+      © 2026 新動力公共關係顧問 imPR
+    </div>
   </div>
 </div>
 
@@ -77,20 +77,21 @@
   function togglePw() {
     const inp = document.getElementById('password');
     const btn = document.getElementById('pwToggle');
-    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
-    else { inp.type = 'password'; btn.textContent = '👁'; }
+    if (inp.type === 'password') {
+      inp.type = 'text'; btn.textContent = '🙈'; btn.setAttribute('aria-label', '隱藏密碼');
+    } else {
+      inp.type = 'password'; btn.textContent = '👁'; btn.setAttribute('aria-label', '顯示密碼');
+    }
   }
 
-  // Enter 鍵送出
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
-
-  async function doLogin() {
+  async function doLogin(event) {
+    if (event) event.preventDefault();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const errBox = document.getElementById('loginError');
     const btn = document.getElementById('loginBtn');
+
+    if (btn.disabled) return;
 
     // 清除舊錯誤
     errBox.style.display = 'none';
