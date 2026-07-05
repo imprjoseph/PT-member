@@ -23,42 +23,69 @@
 </head>
 <body>
 <div class="login-page">
-  <div class="login-bg-circle circle-1"></div>
-  <div class="login-bg-circle circle-2"></div>
-
-  <div class="login-card">
-    <div class="login-card-brand">
-      <img class="login-card-logo" src="impr-logo.png" alt="imPR">
-    </div>
-    <h1 class="login-title">派遣人員勤務管理系統</h1>
-    <p class="login-subtitle">請使用公司帳號登入</p>
-
-    <form class="login-form" id="loginForm" onsubmit="doLogin(event)">
-      <div class="form-group">
-        <label class="form-label" for="email">帳號（Email）</label>
-        <input class="form-input" type="email" id="email" placeholder="請輸入 Email" autocomplete="email" required>
-        <span class="form-error" id="emailError"></span>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="password">密碼</label>
-        <div class="input-wrap">
-          <input class="form-input" type="password" id="password" placeholder="請輸入密碼" autocomplete="current-password" required>
-          <button class="pw-toggle" type="button" id="pwToggle" onclick="togglePw()" aria-label="顯示密碼">👁</button>
+  <div class="login-shell">
+    <section class="login-showcase" aria-label="系統特色">
+      <img class="showcase-logo" src="impr-logo.png" alt="imPR 新動力公共關係顧問">
+      <div class="showcase-content">
+        <div class="showcase-eyebrow">Workforce Operations Platform</div>
+        <h2 class="showcase-title">把每一次出勤，變成<span>清楚可管理</span>的營運資訊。</h2>
+        <p class="showcase-copy">整合出勤、工作回報、加班與請假流程，讓派遣團隊、管理者與業主在同一個可信賴的工作空間協作。</p>
+        <div class="showcase-points">
+          <div class="showcase-point">
+            <span class="showcase-point-icon">◎</span>
+            <strong>即時出勤</strong>
+            <small>快速掌握每日到勤與工時狀態</small>
+          </div>
+          <div class="showcase-point">
+            <span class="showcase-point-icon">◇</span>
+            <strong>流程整合</strong>
+            <small>申請、確認與紀錄集中管理</small>
+          </div>
+          <div class="showcase-point">
+            <span class="showcase-point-icon">✓</span>
+            <strong>權限安全</strong>
+            <small>依角色提供清楚且適切的功能</small>
+          </div>
         </div>
-        <span class="form-error" id="pwError"></span>
       </div>
+      <div class="showcase-foot">imPR · PEOPLE OPERATIONS, SIMPLIFIED</div>
+    </section>
 
-      <button class="btn btn-primary" id="loginBtn" type="submit">
-        <span id="loginBtnText">登入</span>
-      </button>
+    <section class="login-panel">
+      <div class="login-card">
+        <div class="login-kicker">Secure workspace</div>
+        <h1 class="login-title">歡迎回來</h1>
+        <p class="login-subtitle">登入派遣人員勤務管理系統，繼續今天的工作。</p>
 
-      <div id="loginError" role="alert" aria-live="polite" style="display:none;background:#fce8e6;border:1px solid #f5c6c3;border-radius:8px;padding:12px;color:#b31412;font-size:.875rem;text-align:center;"></div>
-    </form>
+        <form class="login-form" id="loginForm" onsubmit="doLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="email">公司帳號</label>
+            <input class="form-input" type="email" id="email" placeholder="name@company.com" autocomplete="email" required>
+            <span class="form-error" id="emailError"></span>
+          </div>
 
-    <div class="login-footer">
-      © 2026 新動力公共關係顧問 imPR
-    </div>
+          <div class="form-group">
+            <label class="form-label" for="password">密碼</label>
+            <div class="input-wrap">
+              <input class="form-input" type="password" id="password" placeholder="輸入您的密碼" autocomplete="current-password" required>
+              <button class="pw-toggle" type="button" id="pwToggle" onclick="togglePw()" aria-label="顯示密碼">👁</button>
+            </div>
+            <span class="form-error" id="pwError"></span>
+          </div>
+
+          <button class="btn btn-primary" id="loginBtn" type="submit">
+            <span id="loginBtnText">安全登入</span>
+          </button>
+
+          <div id="loginError" role="alert" aria-live="polite" style="display:none;background:#fce8e6;border:1px solid #f5c6c3;border-radius:8px;padding:12px;color:#b31412;font-size:.875rem;text-align:center;"></div>
+        </form>
+
+        <div class="login-security"><span>🔒</span> 連線及帳號資訊皆受安全機制保護</div>
+        <div class="login-footer">
+          © 2026 新動力公共關係顧問 imPR
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -106,7 +133,7 @@
     const result = await API.login(email, password);
 
     btn.disabled = false;
-    document.getElementById('loginBtnText').textContent = '登入';
+    document.getElementById('loginBtnText').textContent = '安全登入';
 
     if (!result.success) {
       errBox.style.display = 'block';

@@ -41,23 +41,29 @@
   <span id="navDate" style="font-size:.8rem;color:#5f6368"></span>
 </header>
 <main class="main-content">
-  <div class="page-header">
-    <h1 class="page-title" id="greeting">歡迎，— 👋</h1>
-    <p class="page-sub" id="todayDate">今天是 —</p>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">⏱ 今日出勤</span>
-      <a href="attendance.html" style="font-size:.85rem;color:var(--primary);font-weight:500">去打卡 →</a>
+  <div class="page-header dashboard-hero">
+    <div class="hero-main">
+      <div class="hero-eyebrow">My workspace</div>
+      <h1 class="page-title" id="greeting">歡迎，—</h1>
+      <p class="page-sub" id="todayDate">今天是 —</p>
     </div>
-    <div class="card-body" id="clockStatus"><div style="text-align:center;padding:8px;color:var(--text-muted)">載入中...</div></div>
+    <a class="hero-action" href="attendance.html"><span>⏱</span><strong>前往打卡</strong><small>記錄今日出勤</small></a>
   </div>
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">📝 今日工作回報</span>
-      <a href="work-report.html" style="font-size:.85rem;color:var(--primary);font-weight:500" id="reportLink">填寫 →</a>
+  <div class="dashboard-primary-grid">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">⏱ 今日出勤</span>
+        <a href="attendance.html" style="font-size:.85rem;color:var(--primary);font-weight:500">查看詳情 →</a>
+      </div>
+      <div class="card-body" id="clockStatus"><div style="text-align:center;padding:8px;color:var(--text-muted)">載入中...</div></div>
     </div>
-    <div class="card-body" id="reportStatus"><div style="text-align:center;padding:8px;color:var(--text-muted)">載入中...</div></div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📝 今日工作回報</span>
+        <a href="work-report.html" style="font-size:.85rem;color:var(--primary);font-weight:500" id="reportLink">填寫 →</a>
+      </div>
+      <div class="card-body" id="reportStatus"><div style="text-align:center;padding:8px;color:var(--text-muted)">載入中...</div></div>
+    </div>
   </div>
   <div class="stat-grid">
     <div class="stat-card" style="border-left-color:var(--success)">
@@ -83,7 +89,7 @@
   </div>
   <div class="card">
     <div class="card-header"><span class="card-title">⚡ 快速操作</span></div>
-    <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card-body quick-action-grid">
       <a href="overtime.html"    class="btn btn-outline btn-sm" style="text-decoration:none">⏰ 申請加班</a>
       <a href="leave.html"       class="btn btn-outline btn-sm" style="text-decoration:none">🌿 申請請假</a>
       <a href="issue.html"       class="btn btn-outline btn-sm" style="text-decoration:none">🚨 問題反映</a>
