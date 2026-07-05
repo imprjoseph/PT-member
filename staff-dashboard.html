@@ -130,8 +130,8 @@ async function loadDashboard() {
   const clockEl = document.getElementById('clockStatus');
   if (d.today_attendance) {
     const att = d.today_attendance;
-    const inT  = att.clock_in_time  ? att.clock_in_time.toString().substring(11,16)  : '—';
-    const outT = att.clock_out_time ? att.clock_out_time.toString().substring(11,16) : null;
+    const inT  = UI.formatTime(att.clock_in_time);
+    const outT = att.clock_out_time ? UI.formatTime(att.clock_out_time) : null;
     clockEl.innerHTML = `<div style="display:flex;gap:16px;align-items:center;justify-content:center">
       <div style="text-align:center"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:4px">上班</div>
         <div style="font-size:1.75rem;font-weight:700;color:var(--success);font-family:var(--font-mono)">${inT}</div></div>

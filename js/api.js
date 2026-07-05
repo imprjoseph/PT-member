@@ -180,13 +180,36 @@ const UI = (() => {
 
   function formatDateTime(str) {
     if (!str) return '—';
-    return str.toString().substring(0, 16);
+    const value = str.toString().trim();
+    const local = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})/);
+    if (local && !value.endsWith('Z')) {
+      return `${local[1]} ${local[2].padStart(2, '0')}:${local[3]}`;
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value.substring(0, 16);
+    const parts = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(date);
+    const part = type => parts.find(p => p.type === type)?.value || '';
+    return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
   }
 
   function formatDate(str) {
     if (!str) return '—';
-    return str.toString().substring(0, 10);
+    return formatDateTime(str).substring(0, 10);
   }
 
-  return { showLoading, hideLoading, showToast, showModal, hideModal, statusBadge, formatDateTime, formatDate };
+  function formatTime(str) {
+    if (!str) return '—';
+    const formatted = formatDateTime(str);
+    return formatted.length >= 16 ? formatted.substring(11, 16) : formatted;
+  }
+
+  return {
+    showLoading, hideLoading, showToast, showModal, hideModal,
+    statusBadge, formatDateTime, formatDate, formatTime
+  };
 })();

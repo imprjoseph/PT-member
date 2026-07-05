@@ -181,16 +181,30 @@ async function getClientIP() {
 
 async function loadTodayStatus() {
   const r = await API.getTodayAttendance();
-  if (!r.success) return;
   const el = document.getElementById('todayStatus');
   const btnIn = document.getElementById('btnIn');
   const btnOut = document.getElementById('btnOut');
   const btnRemote = document.getElementById('btnRemote');
 
+  if (!r.success) {
+    el.innerHTML = `<div style="text-align:center;color:var(--danger);font-weight:500;padding:8px">
+      無法確認今日打卡狀態，為避免重複打卡，按鈕已暫停使用。請重新整理後再試。
+    </div>`;
+    btnIn.disabled = true;
+    btnOut.disabled = true;
+    btnRemote.disabled = true;
+    UI.showToast(r.message || '打卡狀態載入失敗', 'error');
+    return false;
+  }
+
+  btnIn.disabled = false;
+  btnOut.disabled = true;
+  btnRemote.disabled = false;
+
   if (r.record) {
     const rec = r.record;
-    const inT  = rec.clock_in_time  ? rec.clock_in_time.toString().substring(11,16)  : '—';
-    const outT = rec.clock_out_time ? rec.clock_out_time.toString().substring(11,16) : null;
+    const inT  = UI.formatTime(rec.clock_in_time);
+    const outT = rec.clock_out_time ? UI.formatTime(rec.clock_out_time) : null;
     el.innerHTML = `
       <div style="display:flex;justify-content:space-around;padding:8px 0">
         <div style="text-align:center">
@@ -210,21 +224,26 @@ async function loadTodayStatus() {
     el.innerHTML = `<div style="text-align:center;color:var(--warning);font-weight:500;padding:8px">今日尚未打卡</div>`;
     btnOut.disabled = true;
   }
+  return true;
 }
 
 async function loadRecords() {
   const now = new Date();
   const start = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
   const r = await API.getAttendanceList({ start_date: start });
-  if (!r.success) return;
   const el = document.getElementById('recordsList');
+  if (!r.success) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div>
+      <div class="empty-text">${r.message || '出勤記錄載入失敗，請重新整理後再試'}</div></div>`;
+    return false;
+  }
   if (!r.records.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">本月尚無出勤記錄</div></div>';
-    return;
+    return true;
   }
   el.innerHTML = r.records.slice(0,10).map(rec => {
-    const inT  = rec.clock_in_time  ? rec.clock_in_time.toString().substring(11,16)  : '—';
-    const outT = rec.clock_out_time ? rec.clock_out_time.toString().substring(11,16) : '—';
+    const inT  = UI.formatTime(rec.clock_in_time);
+    const outT = UI.formatTime(rec.clock_out_time);
     return `<div class="list-item">
       <div class="list-item-main">
         <div class="list-item-title">${rec.date}</div>
@@ -236,6 +255,7 @@ async function loadRecords() {
       </div>
     </div>`;
   }).join('');
+  return true;
 }
 
 function showRemoteLocationInput() {
@@ -265,21 +285,32 @@ async function doClock(type) {
 
   if (!clientIP) await getClientIP();
 
+  const actionButtons = [
+    document.getElementById('btnIn'),
+    document.getElementById('btnOut'),
+    document.getElementById('btnRemote')
+  ];
+  actionButtons.forEach(button => { button.disabled = true; });
+
   let result;
   if (type === 'in') {
     result = await API.clockIn(location, gpsLat, gpsLng, note, clientIP);
   } else if (type === 'out') {
     result = await API.clockOut(location, gpsLat, gpsLng, note, clientIP);
   } else {
-    result = await API.remoteClock('in', location, gpsLat, gpsLng, note);
+    result = await API.remoteClock('in', location, gpsLat, gpsLng, note, clientIP);
   }
 
   if (result.success) {
     UI.showToast(result.message, 'success');
-    await loadTodayStatus();
+    const statusLoaded = await loadTodayStatus();
     await loadRecords();
+    if (!statusLoaded) {
+      UI.showToast('打卡已送出，但畫面同步失敗；請勿重複打卡，重新整理頁面即可', 'warning', 6000);
+    }
   } else {
     UI.showToast(result.message || '操作失敗', 'error');
+    await loadTodayStatus();
   }
 }
 

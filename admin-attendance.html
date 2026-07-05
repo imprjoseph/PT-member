@@ -101,10 +101,10 @@ function renderList() {
   el.innerHTML = `<div class="table-wrap"><table>
     <thead><tr><th>日期</th><th>姓名</th><th>上班</th><th>下班</th><th>工時</th><th>地點</th><th>狀態</th></tr></thead>
     <tbody>${records.map(rec => `<tr>
-      <td style="font-weight:500">${rec.date}</td>
+      <td style="font-weight:500">${UI.formatDate(rec.date)}</td>
       <td>${rec.name}</td>
-      <td style="font-family:var(--font-mono)">${rec.clock_in_time  ? rec.clock_in_time.toString().substring(11,16)  : '—'}</td>
-      <td style="font-family:var(--font-mono)">${rec.clock_out_time ? rec.clock_out_time.toString().substring(11,16) : '—'}</td>
+      <td style="font-family:var(--font-mono)">${UI.formatTime(rec.clock_in_time)}</td>
+      <td style="font-family:var(--font-mono)">${UI.formatTime(rec.clock_out_time)}</td>
       <td style="font-family:var(--font-mono)">${rec.work_hours ? rec.work_hours+'h' : '—'}</td>
       <td style="font-size:.8rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rec.clock_in_location||'—'}</td>
       <td>${UI.statusBadge(rec.status||'normal')}</td>

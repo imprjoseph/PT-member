@@ -175,3 +175,4 @@ function hashPassword_(password, salt) {
   const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
   return bytes.map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
 }
+

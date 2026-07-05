@@ -32,6 +32,7 @@
 | Utils.gs | 共用工具 + doPost 路由 |
 | Auth.gs | 登入、Token、改密碼 |
 | Users.gs | 帳號管理 |
+| Attendance.js | 打卡、出勤查詢、避免重複打卡 |
 
 > 將 `gas/` 資料夾中對應的程式碼貼入各檔案
 
@@ -95,9 +96,27 @@ dispatch-system/
 
 ---
 
-## 第二階段（下一步）
+## 打卡模組
 
-- staff-dashboard.html（派遣人員首頁）
-- attendance.html（打卡）
-- work-report.html（工作回報）
-- GAS：Attendance.gs / WorkReports.gs
+- ✅ staff-dashboard.html（派遣人員首頁）
+- ✅ attendance.html（打卡）
+- ✅ GAS：Attendance.js
+- ⏳ work-report.html / WorkReports.gs
+
+---
+
+## 使用 VS Code 同步 Apps Script
+
+專案已設定 `clasp`，登入憑證只儲存在本機並由 Git 忽略。
+
+```bash
+npm install
+npm run gas:status
+npm run gas:pull
+npm run gas:push
+npm run gas:versions
+npm run gas:deployments
+```
+
+執行 `gas:push` 前，請先確認 `gas/` 內含完整的 Apps Script 後端，
+避免只上傳部分檔案而刪除線上功能。
